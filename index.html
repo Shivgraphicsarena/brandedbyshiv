@@ -602,7 +602,7 @@ let currentUser=null,userProfile=null,selectedTheme='Dark Luxury';
 let lastBrand=null,lastInputs={},usedNames=[];
 let otpEmail='',generatedOTP='',otpExpiry=0;
 let cooldownInterval=null;
-const ADMIN_UID='yScTy8HL7fgBVvKlKcwavfqrRi93'; // Set your Firebase UID here for unlimited access
+const ADMIN_UID=''; // Set your Firebase UID here for unlimited access
 
 /* ═══════════════════════════════════════════════
    NICHE DATABASE
@@ -819,32 +819,29 @@ async function verifyOTP(){
   if(code.length!==6){setAMsg('otpMsg','Enter full 6-digit code.','err');return;}
   if(Date.now()>otpExpiry){setAMsg('otpMsg','Code expired. Resend.','err');return;}
   if(code!==generatedOTP){setAMsg('otpMsg','Incorrect code. Try again.','err');return;}
-
-  // Instant UI feedback — don't make user wait for Firebase
   const btn=document.getElementById('verifyBtn');
-  btn.disabled=true;
-  btn.textContent='✦ Verified';
-  btn.style.background='var(--ok)';
-  setAMsg('otpMsg','Code verified! Signing you in…','ok');
-
-  // Flash all OTP digits gold
+  btn.disabled=true;btn.textContent='✦ Verified';btn.style.background='var(--ok)';
+  setAMsg('otpMsg','Signing you in…','ok');
   digits.forEach(d=>{d.style.borderColor='var(--ok)';d.style.color='var(--ok)';});
-
-  // Firebase auth in background
+  const pw='BBS_'+otpEmail.split('@')[0]+'_'+otpEmail.length+'_secure2025';
   try{
-    const pw='BBS_'+otpEmail.split('@')[0]+'_'+otpEmail.length+'_secure2025';
-    try{await auth.signInWithEmailAndPassword(otpEmail,pw);}
-    catch(e){
-      if(e.code==='auth/user-not-found'||e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'){
-        await auth.createUserWithEmailAndPassword(otpEmail,pw);
-      }else throw e;
-    }
+    await auth.createUserWithEmailAndPassword(otpEmail,pw);
   }catch(e){
-    btn.disabled=false;btn.textContent='Verify & Enter';btn.style.background='';
-    digits.forEach(d=>{d.style.borderColor='';d.style.color='';});
-    setAMsg('otpMsg','Error: '+e.message,'err');
+    if(e.code==='auth/email-already-in-use'){
+      try{await auth.signInWithEmailAndPassword(otpEmail,pw);}
+      catch(e2){
+        btn.disabled=false;btn.textContent='Verify & Enter';btn.style.background='';
+        digits.forEach(d=>{d.style.borderColor='';d.style.color='';});
+        setAMsg('otpMsg','Sign in failed. Try again.','err');
+      }
+    }else{
+      btn.disabled=false;btn.textContent='Verify & Enter';btn.style.background='';
+      digits.forEach(d=>{d.style.borderColor='';d.style.color='';});
+      setAMsg('otpMsg','Error: '+e.message,'err');
+    }
   }
 }
+
 
 function setAMsg(id,msg,type){const el=document.getElementById(id);el.textContent=msg;el.className='auth-msg'+(type?' '+type:'');}
 
