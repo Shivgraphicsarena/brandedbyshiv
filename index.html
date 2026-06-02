@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BrandedByShiv — AI Brand Identity Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+--gold:#C9A84C;--gold-light:#F0D080;
+--dark:#09090E;--dark2:#111118;--dark3:#18181F;
+--border:rgba(201,168,76,0.22);--border-bright:rgba(201,168,76,0.55);
+--text:#E4E4EF;--muted:#6A6A8A;--muted2:#9090B0;
+--success:#52C87A;--error:#FF6B6B;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--dark);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+background:radial-gradient(ellipse 60% 40% at 50% -10%,rgba(201,168,76,0.07) 0%,transparent 60%),
+radial-gradient(ellipse 40% 30% at 80% 80%,rgba(201,168,76,0.04) 0%,transparent 50%);}
+.wrap{max-width:900px;margin:0 auto;padding:56px 24px 100px;position:relative;z-index:1;}
+
+/* ── AUTH ── */
+.auth-screen{position:fixed;inset:0;background:var(--dark);z-index:5000;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px;}
+.auth-screen.hidden{display:none;}
+.auth-card{background:var(--dark2);border:1px solid var(--border);border-radius:24px;padding:40px 36px;max-width:420px;width:100%;position:relative;overflow:hidden;text-align:center;}
+.auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,var(--gold) 50%,transparent 95%);}
+.auth-logo{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,#fff 0%,var(--gold-light) 55%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
+.auth-sub{color:var(--muted2);font-size:13px;margin-bottom:28px;line-height:1.6;}
+.auth-input{width:100%;background:var(--dark3);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-family:'DM Sans',sans-serif;font-size:15px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;margin-bottom:14px;text-align:center;}
+.auth-input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.1);}
+.auth-input::placeholder{color:var(--muted);}
+.auth-btn{width:100%;background:linear-gradient(135deg,var(--gold) 0%,#9A6820 100%);color:#08080D;border:none;border-radius:12px;padding:15px 24px;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .15s;position:relative;overflow:hidden;margin-bottom:12px;}
+.auth-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%);pointer-events:none;}
+.auth-btn:hover:not(:disabled){opacity:.92;transform:translateY(-1px);}
+.auth-btn:disabled{opacity:.4;cursor:not-allowed;}
+.auth-msg{font-size:12.5px;color:var(--muted2);line-height:1.6;margin-top:8px;min-height:20px;}
+.auth-msg.error{color:var(--error);}
+.auth-msg.success{color:var(--success);}
+.auth-steps{display:flex;gap:8px;justify-content:center;margin-bottom:20px;}
+.auth-step{width:8px;height:8px;border-radius:50%;background:rgba(201,168,76,0.15);transition:all .3s;}
+.auth-step.active{background:var(--gold);transform:scale(1.2);}
+.auth-step.done{background:var(--success);}
+.auth-otp-row{display:flex;gap:8px;justify-content:center;margin-bottom:14px;}
+.auth-otp-digit{width:48px;height:56px;background:var(--dark3);border:1px solid var(--border);border-radius:12px;font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--gold-light);text-align:center;outline:none;transition:border-color .2s,box-shadow .2s;}
+.auth-otp-digit:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.15);}
+.auth-resend{font-size:12px;color:var(--muted);cursor:pointer;transition:color .2s;margin-top:4px;}
+.auth-resend:hover{color:var(--gold);}
+.auth-resend.disabled{pointer-events:none;opacity:.4;}
+
+/* ── PROFILE POPUP ── */
+.profile-popup{position:fixed;inset:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(8px);z-index:4000;display:none;align-items:center;justify-content:center;padding:24px;}
+.profile-popup.open{display:flex;}
+.profile-card{background:var(--dark2);border:1px solid var(--border);border-radius:24px;padding:36px 32px;max-width:440px;width:100%;position:relative;overflow:hidden;animation:slideUp .32s cubic-bezier(0.16,1,0.3,1);}
+.profile-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,var(--gold) 50%,transparent 95%);}
+.profile-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--gold-light);margin-bottom:6px;text-align:center;}
+.profile-sub{font-size:12.5px;color:var(--muted2);text-align:center;margin-bottom:24px;line-height:1.6;}
+
+/* ── USER BAR ── */
+.user-bar{display:none;background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:14px 20px;margin-bottom:24px;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.user-bar.visible{display:flex;}
+.ub-left{display:flex;align-items:center;gap:12px;}
+.ub-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#7A5218);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:15px;font-weight:700;color:var(--dark);flex-shrink:0;}
+.ub-name{font-size:14px;font-weight:600;color:var(--text);}
+.ub-email{font-size:11px;color:var(--muted);}
+.ub-right{display:flex;align-items:center;gap:14px;}
+.ub-credits{font-size:12px;color:var(--gold-light);background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.2);border-radius:20px;padding:5px 14px;font-weight:500;}
+.ub-credits.exhausted{color:var(--error);background:rgba(255,107,107,0.08);border-color:rgba(255,107,107,0.2);}
+.ub-logout{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);padding:5px 12px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.ub-logout:hover{border-color:var(--error);color:var(--error);}
+.cooldown-banner{display:none;background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.2);border-radius:14px;padding:20px 24px;margin-bottom:24px;text-align:center;}
+.cooldown-banner.visible{display:block;}
+.cooldown-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--error);margin-bottom:8px;}
+.cooldown-timer{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--gold-light);margin-bottom:8px;letter-spacing:2px;}
+.cooldown-sub{font-size:12.5px;color:var(--muted2);line-height:1.6;}
+
+/* ── HEADER ── */
+.header{text-align:center;margin-bottom:52px;}
+.eyebrow{font-size:10px;letter-spacing:5px;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:12px;}
+.eyebrow::before,.eyebrow::after{content:'';height:1px;width:40px;background:linear-gradient(90deg,transparent,var(--gold));}
+.eyebrow::after{background:linear-gradient(90deg,var(--gold),transparent);}
+h1{font-family:'Playfair Display',serif;font-size:clamp(34px,7vw,64px);font-weight:900;line-height:1.02;background:linear-gradient(135deg,#fff 0%,var(--gold-light) 55%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:14px;letter-spacing:-1px;}
+.tagline{color:var(--muted2);font-size:15px;font-weight:300;letter-spacing:.3px;line-height:1.6;}
+
+/* ── CARDS / FORM ── */
+.card{background:var(--dark2);border:1px solid var(--border);border-radius:20px;padding:32px 36px;margin-bottom:24px;position:relative;overflow:hidden;}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent 5%,var(--gold) 50%,transparent 95%);}
+.card-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold-light);margin-bottom:22px;display:flex;align-items:center;gap:10px;}
+.card-title::before{content:'';width:3px;height:18px;background:var(--gold);border-radius:2px;flex-shrink:0;}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px;}
+@media(max-width:540px){.fields{grid-template-columns:1fr;}}
+.field{display:flex;flex-direction:column;gap:7px;}
+.field label{font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:600;display:flex;align-items:center;gap:6px;}
+.req-star{color:#FF6B6B;font-size:13px;line-height:1;}
+.opt-tag{color:var(--muted);font-size:9px;letter-spacing:1px;font-weight:400;}
+.field input,.field select{background:var(--dark3);border:1px solid var(--border);border-radius:10px;padding:13px 16px;font-family:'DM Sans',sans-serif;font-size:14.5px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;width:100%;}
+.field input:focus,.field select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.1);}
+.field input::placeholder{color:var(--muted);}
+.field select option{background:var(--dark3);color:var(--text);}
+.field input.invalid{border-color:var(--error);box-shadow:0 0 0 3px rgba(255,107,107,0.1);}
+.audience-wrap{display:flex;flex-direction:column;}
+.audience-select{background:var(--dark3);border:1px solid var(--border);border-radius:10px 10px 0 0;border-bottom:1px solid rgba(201,168,76,0.1);padding:13px 36px 13px 16px;font-family:'DM Sans',sans-serif;font-size:14.5px;color:var(--text);outline:none;transition:border-color .2s;width:100%;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C9A84C' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
+.audience-select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.1);}
+.audience-select option{background:var(--dark3);color:var(--text);}
+.audience-custom{background:var(--dark3);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s;width:100%;display:none;}
+.audience-custom:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,76,0.1);}
+.audience-custom::placeholder{color:var(--muted);}
+.theme-wrap{margin-bottom:22px;}
+.theme-label-row{font-size:10.5px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.theme-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;}
+@media(max-width:560px){.theme-grid{grid-template-columns:repeat(3,1fr);}}
+.theme-btn{background:var(--dark3);border:2px solid var(--border);border-radius:10px;padding:10px 8px;cursor:pointer;text-align:center;font-family:'DM Sans',sans-serif;font-size:11px;color:var(--muted2);transition:all .2s;line-height:1.3;}
+.theme-btn:hover{border-color:var(--border-bright);color:var(--text);}
+.theme-btn.active{border-color:var(--gold);background:rgba(201,168,76,0.1);color:var(--gold-light);font-weight:600;}
+.theme-btn.invalid-theme{border-color:var(--error);}
+.theme-icon{font-size:20px;display:block;margin-bottom:4px;}
+.theme-hint{font-size:10.5px;color:var(--error);margin-top:8px;display:none;}
+.theme-hint.visible{display:block;}
+
+/* ── GENERATE BUTTON ── */
+.btn-generate{width:100%;background:linear-gradient(135deg,var(--gold) 0%,#9A6820 100%);color:#08080D;border:none;border-radius:12px;padding:16px 32px;font-family:'Playfair Display',serif;font-size:16px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:opacity .2s,transform .15s;position:relative;overflow:hidden;}
+.btn-generate::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%);pointer-events:none;}
+.btn-generate:hover:not(:disabled){opacity:.92;transform:translateY(-1px);}
+.btn-generate:active:not(:disabled){transform:translateY(0);}
+.btn-generate:disabled{opacity:.4;cursor:not-allowed;}
+.loading-bar{height:2px;background:var(--dark3);border-radius:2px;overflow:hidden;margin-top:14px;display:none;}
+.loading-bar.visible{display:block;}
+.loading-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light),var(--gold));background-size:200% 100%;animation:shimmer 1.4s linear infinite;width:100%;}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.loading-text{text-align:center;font-size:13px;color:var(--muted);margin-top:12px;display:none;}
+.loading-text.visible{display:block;}
+.error-msg{background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.25);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--error);margin-top:12px;display:none;}
+.error-msg.visible{display:block;}
+
+/* ── API BADGE ── */
+.api-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(82,200,122,0.1);border:1px solid rgba(82,200,122,0.25);border-radius:20px;padding:4px 12px;font-size:10.5px;color:var(--success);letter-spacing:1px;text-transform:uppercase;font-weight:600;margin-bottom:16px;}
+.api-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(0.8);}}
+
+/* ── OUTPUT ── */
+#output{display:none;}
+.section-eyebrow{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:18px;}
+.brand-hero{background:linear-gradient(135deg,rgba(201,168,76,0.08) 0%,rgba(255,255,255,0.02) 100%);border:1px solid rgba(201,168,76,0.35);border-radius:18px;overflow:hidden;margin-bottom:20px;}
+.bh-top{padding:18px 22px 14px;border-bottom:1px solid rgba(201,168,76,0.12);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.bh-label{font-size:9.5px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:600;}
+.bh-cat{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:3px 11px;}
+.bh-name-row{padding:16px 22px 4px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.bh-name-label{font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);white-space:nowrap;flex-shrink:0;}
+.bh-name-value{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;background:linear-gradient(135deg,#fff 0%,var(--gold-light) 55%,var(--gold) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.bh-tagline{padding:3px 22px 14px;font-size:13.5px;color:var(--gold-light);font-style:italic;font-weight:400;letter-spacing:.3px;opacity:.85;}
+.bh-meaning{padding:0 22px 14px;font-size:12.5px;color:#A0A0C0;font-style:italic;font-weight:300;line-height:1.65;border-bottom:1px solid rgba(201,168,76,0.08);}
+.bh-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(201,168,76,0.07);}
+.bh-cell{background:rgba(9,9,14,0.7);padding:12px 18px;}
+.bh-cell-wide{grid-column:span 2;}
+.bh-cell-label{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:5px;}
+.bh-cell-value{font-size:12.5px;color:var(--text);font-weight:400;line-height:1.5;}
+.bh-hashtags{padding:12px 22px 14px;border-top:1px solid rgba(201,168,76,0.08);display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;}
+.bh-ht-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding-top:2px;white-space:nowrap;flex-shrink:0;}
+.hashtag{font-size:11.5px;color:var(--gold);background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:20px;padding:2px 9px;}
+
+/* ── PROMPT CARDS ── */
+.prompt-card{background:var(--dark2);border:1px solid var(--border);border-radius:16px;padding:24px 28px;margin-bottom:14px;transition:border-color .2s;}
+.prompt-card:hover{border-color:var(--border-bright);}
+.prompt-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+.prompt-num{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#7A5218);display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:12px;font-weight:700;color:var(--dark);flex-shrink:0;}
+.prompt-title-text{font-family:'Playfair Display',serif;font-size:15px;color:var(--text);font-weight:700;flex:1;}
+.prompt-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.action-btn{background:var(--dark3);border:1px solid var(--border);border-radius:8px;color:var(--muted2);padding:6px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.action-btn:hover{border-color:var(--gold);color:var(--gold);}
+.action-btn.run{background:rgba(201,168,76,0.1);border-color:rgba(201,168,76,0.3);color:var(--gold-light);}
+.action-btn.run:hover{background:rgba(201,168,76,0.2);}
+.action-btn.copied{background:rgba(82,200,122,0.1);border-color:rgba(82,200,122,0.3);color:var(--success);}
+.prompt-text{font-size:13px;color:var(--muted2);line-height:1.75;font-weight:300;margin-bottom:12px;padding:12px 14px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid rgba(255,255,255,0.04);}
+.prompt-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.meta-badge{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;border-radius:20px;padding:3px 10px;font-weight:600;}
+.meta-ratio{background:rgba(201,168,76,0.08);color:var(--gold);border:1px solid rgba(201,168,76,0.2);}
+.meta-model{background:rgba(144,144,176,0.08);color:var(--muted2);border:1px solid rgba(144,144,176,0.15);}
+.meta-pinterest{background:rgba(230,0,35,0.1);color:#E60023;border:1px solid rgba(230,0,35,0.25);}
+
+/* ── PINTEREST INSIGHT BOX ── */
+.pinterest-insight{background:linear-gradient(135deg,rgba(230,0,35,0.06),rgba(201,168,76,0.04));border:1px solid rgba(230,0,35,0.2);border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px;}
+.pi-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.pi-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#E60023;font-weight:700;margin-bottom:3px;}
+.pi-text{font-size:12px;color:var(--muted2);line-height:1.6;}
+
+/* ── PALETTE ── */
+.palette-swatches{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.swatch{width:28px;height:28px;border-radius:6px;cursor:pointer;position:relative;border:1px solid rgba(255,255,255,0.08);transition:transform .15s;}
+.swatch:hover{transform:scale(1.15);}
+.swatch-tooltip{position:absolute;bottom:calc(100%+4px);left:50%;transform:translateX(-50%);background:var(--dark2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:9px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s;color:var(--text);}
+.swatch:hover .swatch-tooltip{opacity:1;}
+.palette-text{font-size:10px;color:var(--muted);margin-top:4px;}
+
+/* ── OUTPUT ACTIONS ── */
+.output-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.oa-btn{background:var(--dark2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted2);cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px;}
+.oa-btn:hover{border-color:var(--gold);color:var(--gold-light);}
+.oa-btn.primary{background:linear-gradient(135deg,rgba(201,168,76,0.15),rgba(201,168,76,0.05));border-color:rgba(201,168,76,0.4);color:var(--gold-light);}
+.oa-btn.primary:hover{background:linear-gradient(135deg,rgba(201,168,76,0.25),rgba(201,168,76,0.1));}
+.oa-btn.loading{opacity:.6;pointer-events:none;}
+
+/* ── MJ TOGGLE ── */
+.mj-toggle-row{display:flex;align-items:center;gap:12px;margin-bottom:18px;padding:14px 18px;background:var(--dark3);border-radius:10px;border:1px solid var(--border);}
+.mj-toggle{width:36px;height:20px;background:var(--dark);border-radius:10px;border:1px solid var(--border);cursor:pointer;position:relative;transition:background .2s;flex-shrink:0;}
+.mj-toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:all .2s;}
+.mj-toggle.on{background:rgba(201,168,76,0.2);border-color:var(--gold);}
+.mj-toggle.on::after{left:18px;background:var(--gold);}
+.mj-label{font-size:12px;color:var(--muted2);}
+.mj-label span{font-size:11px;color:var(--muted);display:block;}
+
+/* ── STEP MODAL ── */
+.step-modal{position:fixed;inset:0;background:rgba(0,0,0,0.9);backdrop-filter:blur(12px);z-index:3000;display:none;align-items:center;justify-content:center;padding:20px;}
+.step-modal.open{display:flex;}
+.step-card{background:var(--dark2);border:1px solid var(--border);border-radius:24px;padding:36px 32px;max-width:480px;width:100%;position:relative;overflow:hidden;animation:slideUp .3s cubic-bezier(0.16,1,0.3,1);}
+.step-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 5%,var(--gold) 50%,transparent 95%);}
+.step-close{position:absolute;top:16px;right:16px;background:none;border:1px solid var(--border);border-radius:50%;width:28px;height:28px;cursor:pointer;color:var(--muted);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.step-close:hover{border-color:var(--error);color:var(--error);}
+.progress-track{display:flex;gap:6px;margin-bottom:24px;flex-wrap:wrap;}
+.pip{width:20px;height:4px;border-radius:2px;background:rgba(201,168,76,0.15);transition:all .3s;}
+.pip.active{background:var(--gold);width:32px;}
+.pip.done{background:var(--success);}
+.step-label{font-size:9.5px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:6px;}
+.step-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--text);margin-bottom:10px;font-weight:700;}
+.step-instruction{font-size:12.5px;color:var(--muted2);line-height:1.7;margin-bottom:16px;}
+.step-preview{font-size:11.5px;color:var(--muted);line-height:1.6;padding:10px 14px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid rgba(255,255,255,0.04);margin-bottom:20px;font-style:italic;}
+.step-btns{display:flex;gap:10px;}
+.step-go{flex:1;background:linear-gradient(135deg,var(--gold),#9A6820);color:#08080D;border:none;border-radius:10px;padding:13px;font-family:'Playfair Display',serif;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s;}
+.step-go:hover{opacity:.9;}
+.step-skip{background:transparent;border:1px solid var(--border);border-radius:10px;padding:13px 18px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s;}
+.step-skip:hover{border-color:var(--border-bright);color:var(--text);}
+.step-counter{font-size:10px;color:var(--muted);text-align:center;margin-top:12px;}
+.modal-done{display:none;text-align:center;padding:8px;}
+.modal-done.visible{display:block;}
+.done-icon{font-size:48px;margin-bottom:12px;}
+.done-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--gold-light);margin-bottom:8px;}
+.done-sub{font-size:13px;color:var(--muted2);line-height:1.6;margin-bottom:20px;}
+
+/* ── HISTORY ── */
+.history-section{margin-top:48px;}
+.history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.history-clear{font-size:11px;color:var(--muted);cursor:pointer;border:1px solid var(--border);border-radius:6px;padding:4px 10px;background:none;font-family:'DM Sans',sans-serif;transition:all .2s;}
+.history-clear:hover{border-color:var(--error);color:var(--error);}
+.history-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;}
+.history-card{background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all .2s;position:relative;}
+.history-card:hover{border-color:var(--border-bright);transform:translateY(-2px);}
+.hc-name{font-family:'Playfair Display',serif;font-size:15px;color:var(--text);font-weight:700;margin-bottom:4px;}
+.hc-biz{font-size:11px;color:var(--muted);margin-bottom:10px;}
+.hc-swatches{display:flex;gap:4px;margin-bottom:8px;}
+.hc-swatch{width:16px;height:16px;border-radius:3px;border:1px solid rgba(255,255,255,0.06);}
+.hc-date{font-size:10px;color:var(--muted);margin-bottom:6px;}
+.hc-restore{font-size:10.5px;color:var(--gold);font-weight:600;letter-spacing:.5px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--dark2);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;color:var(--text);opacity:0;transition:all .3s;z-index:9999;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+@keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+.app-content{display:none;}
+.app-content.visible{display:block;}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">BrandedByShiv</div>
+    <p class="auth-sub">AI-Powered Brand Identity Engine<br>Pinterest-Quality Visuals</p>
+    <div class="auth-steps">
+      <div class="auth-step active" id="authStep1"></div>
+      <div class="auth-step" id="authStep2"></div>
+    </div>
+    <div id="authEmailStep">
+      <input class="auth-input" type="email" id="authEmail" placeholder="Enter your email address" autocomplete="email">
+      <button class="auth-btn" id="authSendBtn" onclick="sendOTP()">Send Verification Code</button>
+      <p class="auth-msg" id="authMsg"></p>
+    </div>
+    <div id="authOtpStep" style="display:none;">
+      <p style="font-size:12.5px;color:var(--muted2);margin-bottom:14px;">Code sent to <strong id="authEmailDisplay" style="color:var(--gold-light)"></strong></p>
+      <div class="auth-otp-row">
+        <input class="auth-otp-digit" type="text" maxlength="1" inputmode="numeric">
+        <input class="auth-otp-digit" type="text" maxlength="1" inputmode="numeric">
+        <input class="auth-otp-digit" type="text" maxlength="1" inputmode="numeric">
+        <input class="auth-otp-digit" type="text" maxlength="1" inputmode="numeric">
+        <input class="auth-otp-digit" type="text" maxlength="1" inputmode="numeric">
+        <input class="auth-otp-digit" type="text" maxlength="1" inputmode="numeric">
+      </div>
+      <button class="auth-btn" id="authVerifyBtn" onclick="verifyOTP()">Verify & Sign In</button>
+      <div class="auth-resend" id="authResend" onclick="resendOTP()">Resend code</div>
+      <p class="auth-msg" id="authOtpMsg"></p>
+      <div style="margin-top:10px;"><span onclick="backToEmail()" style="font-size:12px;color:var(--muted);cursor:pointer;">← Back</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE POPUP -->
+<div class="profile-popup" id="profilePopup">
+  <div class="profile-card">
+    <div class="profile-title">Complete Your Profile</div>
+    <div class="profile-sub">This helps us personalize your brand identity</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <input class="auth-input" type="text" id="profileName" placeholder="First Name *">
+      <input class="auth-input" type="text" id="profileSurname" placeholder="Last Name (optional)">
+      <input class="auth-input" type="text" id="profileInstagram" placeholder="Instagram handle (optional)">
+    </div>
+    <button class="auth-btn" style="margin-top:16px;" onclick="saveProfile()">Start Creating ✦</button>
+    <p class="auth-msg" id="profileMsg"></p>
+  </div>
+</div>
+
+<!-- STEP MODAL -->
+<div class="step-modal" id="stepModal">
+  <div class="step-card">
+    <button class="step-close" onclick="closeModal()">×</button>
+    <div id="progressTrack" class="progress-track"></div>
+    <div id="modalContent">
+      <div class="step-label" id="stepLabel">STEP 1 OF 7</div>
+      <div class="step-title" id="stepTitle"></div>
+      <div class="step-instruction" id="stepInstruction"></div>
+      <div class="step-preview" id="stepPreview"></div>
+      <div class="step-btns">
+        <button class="step-go" onclick="stepGo()">Copy & Open Gemini ↗</button>
+        <button class="step-skip" onclick="stepSkip()">Skip</button>
+      </div>
+      <div class="step-counter" id="stepCounter"></div>
+    </div>
+    <div class="modal-done" id="modalDone">
+      <div class="done-icon">✦</div>
+      <div class="done-title">All Images Ready!</div>
+      <div class="done-sub">Your complete brand identity system has been generated.<br>Assemble them into your brand kit.</div>
+      <button class="auth-btn" style="max-width:200px;margin:0 auto;" onclick="closeModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MAIN APP -->
+<div class="app-content" id="appContent">
+<div class="wrap">
+
+  <!-- USER BAR -->
+  <div class="user-bar" id="userBar">
+    <div class="ub-left">
+      <div class="ub-avatar" id="ubAvatar">U</div>
+      <div>
+        <div class="ub-name" id="ubName"></div>
+        <div class="ub-email" id="ubEmail"></div>
+      </div>
+    </div>
+    <div class="ub-right">
+      <div class="ub-credits" id="ubCredits">3 / 3 credits</div>
+      <button class="ub-logout" onclick="logoutUser()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- COOLDOWN BANNER -->
+  <div class="cooldown-banner" id="cooldownBanner">
+    <div class="cooldown-title">Credits Refreshing</div>
+    <div class="cooldown-timer" id="cooldownTimer">00:00:00</div>
+    <div class="cooldown-sub">Your 3 credits reset every 48 hours.<br>Come back soon!</div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="eyebrow">AI Brand Identity Engine</div>
+    <h1>BrandedByShiv</h1>
+    <p class="tagline">Pinterest-quality brand identities — generated by AI, inspired by the world's best visual trends</p>
+    <div style="margin-top:14px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;">
+      <span class="api-badge">✦ Claude AI Powered</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(230,0,35,0.08);border:1px solid rgba(230,0,35,0.2);border-radius:20px;padding:4px 12px;font-size:10.5px;color:#E60023;letter-spacing:1px;text-transform:uppercase;font-weight:600;">📌 Pinterest-Inspired Prompts</span>
+    </div>
+  </div>
+
+  <!-- INPUT FORM -->
+  <div class="card">
+    <div class="card-title">Your Brand Details</div>
+    <div class="fields">
+      <div class="field">
+        <label>Your Name <span class="req-star">*</span></label>
+        <input type="text" id="inputName" placeholder="e.g. Shiv">
+      </div>
+      <div class="field">
+        <label>Business / Niche <span class="req-star">*</span></label>
+        <input type="text" id="inputBiz" placeholder="e.g. Luxury Cake Studio">
+      </div>
+      <div class="field">
+        <label>Brand Vibe</label>
+        <select id="inputVibe">
+          <option value="">— Select vibe —</option>
+          <option value="Luxury & Premium">Luxury & Premium</option>
+          <option value="Bold & Energetic">Bold & Energetic</option>
+          <option value="Minimal & Modern">Minimal & Modern</option>
+          <option value="Warm & Friendly">Warm & Friendly</option>
+          <option value="Elegant & Refined">Elegant & Refined</option>
+          <option value="Edgy & Creative">Edgy & Creative</option>
+          <option value="Natural & Organic">Natural & Organic</option>
+          <option value="Playful & Fun">Playful & Fun</option>
+          <option value="Corporate & Professional">Corporate & Professional</option>
+          <option value="Dark & Mysterious">Dark & Mysterious</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Target Audience <span class="opt-tag">OPTIONAL</span></label>
+        <div class="audience-wrap">
+          <select class="audience-select" id="audienceSelect" onchange="handleAudienceSelect()">
+            <option value="">— Select audience —</option>
+            <option value="Young professionals (22–35)">Young professionals (22–35)</option>
+            <option value="Entrepreneurs & founders">Entrepreneurs & founders</option>
+            <option value="Luxury consumers">Luxury consumers</option>
+            <option value="Gen Z (16–24)">Gen Z (16–24)</option>
+            <option value="Millennial women (25–40)">Millennial women (25–40)</option>
+            <option value="Health-conscious adults">Health-conscious adults</option>
+            <option value="Corporate professionals">Corporate professionals</option>
+            <option value="Creative professionals">Creative professionals</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <input class="audience-custom" type="text" id="audienceCustom" placeholder="Describe your audience…">
+        </div>
+      </div>
+    </div>
+
+    <div class="theme-wrap">
+      <div class="theme-label-row">Visual Theme <span class="req-star">*</span></div>
+      <div class="theme-grid">
+        <button class="theme-btn" data-theme="Minimal Modern" onclick="setTheme(this)"><span class="theme-icon">◻</span>Minimal Modern</button>
+        <button class="theme-btn" data-theme="Vintage Cozy" onclick="setTheme(this)"><span class="theme-icon">☕</span>Vintage Cozy</button>
+        <button class="theme-btn" data-theme="Dark Luxury" onclick="setTheme(this)"><span class="theme-icon">✦</span>Dark Luxury</button>
+        <button class="theme-btn" data-theme="Vibrant Pop" onclick="setTheme(this)"><span class="theme-icon">⚡</span>Vibrant Pop</button>
+        <button class="theme-btn" data-theme="Bold Impact" onclick="setTheme(this)"><span class="theme-icon">◆</span>Bold Impact</button>
+      </div>
+      <div class="theme-hint" id="themeHint">Please select a visual theme</div>
+    </div>
+
+    <div class="mj-toggle-row">
+      <div class="mj-toggle" id="mjToggle" onclick="toggleMJ()"></div>
+      <div class="mj-label">Midjourney Mode <span id="mjDesc">Gemini / Imagen (default)</span></div>
+    </div>
+
+    <button class="btn-generate" id="generateBtn" onclick="generate()">✦ Generate My Brand Identity</button>
+    <div class="loading-bar" id="loadingBar"><div class="loading-bar-fill"></div></div>
+    <div class="loading-text" id="loadingText">Searching Pinterest trends…</div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- OUTPUT SECTION -->
+  <div id="output">
+    <p class="section-eyebrow">✦ Your Brand Identity</p>
+    <div class="brand-hero" id="brandHero"></div>
+
+    <div id="pinterestInsightBox"></div>
+
+    <div class="output-actions">
+      <button class="oa-btn primary" onclick="startStepMode()">▶ Generate Images Step-by-Step</button>
+      <button class="oa-btn" onclick="runAllCollage()">⊞ All-in-One Collage</button>
+      <button class="oa-btn" onclick="copyBrandSheet()">⎘ Copy Full Brand Sheet</button>
+      <button class="oa-btn" id="regenBtn" onclick="regenAll()">↺ Regenerate</button>
+    </div>
+
+    <p class="section-eyebrow">✦ Pinterest-Quality Image Prompts</p>
+    <div id="promptsContainer"></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history-section" id="historySection" style="display:none;">
+    <div class="history-header">
+      <p class="section-eyebrow" style="margin:0;">✦ Recent Brands</p>
+      <button class="history-clear" onclick="clearHistory()">Clear History</button>
+    </div>
+    <div class="history-grid" id="historyGrid"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   FIREBASE CONFIG
+══════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyAaR7_TcrigAKidRCLbyiwf9vcPlllLi7I",
+  authDomain: "brandingbyshiv-d0577.firebaseapp.com",
+  projectId: "brandingbyshiv-d0577",
+  storageBucket: "brandingbyshiv-d0577.firebasestorage.app",
+  messagingSenderId: "26979057059",
+  appId: "1:26979057059:web:7bd2297e0ebd18ab01ae16"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* ══════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════ */
+let currentUser=null,userProfile=null,selectedTheme='',mjMode=false;
+let lastBrandData=null,lastInputs={},usedBrandNames=[];
+let stepQueue=[],stepIndex=0,cooldownInterval=null;
+let otpEmail='',generatedOTP='',otpExpiry=0;
+
+/* ══════════════════════════════════════════════════════
+   NICHE DATABASE
+══════════════════════════════════════════════════════ */
+const NICHE_DB = {"cars":{"c":["Charcoal/Chrome","Black/Gold","Midnight/Silver","Steel/Red"],"i":["Sleek car parked at dusk, showroom interior, close-up of dashboard and steering wheel, road at golden hour"]},"car":{"c":["Charcoal/Chrome","Black/Gold","Midnight/Silver","Steel/Red"],"i":["Sleek car parked at dusk, showroom interior, close-up of dashboard and steering wheel, road at golden hour"]},"automobile":{"c":["Charcoal/Chrome","Black/Gold","Midnight/Silver","Steel/Red"],"i":["Luxury car exterior, polished chrome detail, showroom lighting, road trip lifestyle"]},"trainer":{"c":["Teal/Red","Gold/Orange","Brown/Gold","Gold/Pink"],"i":["Storefront, staff working, customer interaction, product showcase for Fitness Trainer"]},"fitness trainer":{"c":["Teal/Red","Gold/Orange","Brown/Gold","Gold/Pink"],"i":["Storefront, staff working, customer interaction, product showcase for Fitness Trainer"]},"bakery":{"c":["Red/White","Gold/Orange","Orange/Blue","Black/White","White/Pink","Pink/Orange"],"i":["Storefront, staff working, customer interaction, product showcase for Bakery"]},"bookstore":{"c":["Brown/Gold","Blue/White","Green/Brown","Purple/Gold"],"i":["Storefront, staff working, customer interaction, product showcase for Bookstore"]},"cafe":{"c":["Brown/Cream","Black/Gold","White/Brown","Teal/White"],"i":["Storefront, staff working, customer interaction, product showcase for Cafe"]},"gym":{"c":["Black/Red","Blue/White","Orange/Black","Gold/Black"],"i":["Storefront, staff working, customer interaction, product showcase for Gym"]},"salon":{"c":["Pink/Gold","Black/Pink","White/Rose","Purple/Gold"],"i":["Storefront, staff working, customer interaction, product showcase for Salon"]},"restaurant":{"c":["Red/Gold","Black/White","Orange/Brown","Cream/Brown"],"i":["Storefront, staff working, customer interaction, product showcase for Restaurant"]},"photography":{"c":["Black/White","Gold/Black","White/Silver","Brown/Cream"],"i":["Studio setup, outdoor shoots, behind the scenes for Photography Studio"]},"fashion":{"c":["Black/Gold","White/Black","Rose/Gold","Beige/Brown"],"i":["Flat lays, model shoots, clothing close-ups for Fashion Brand"]},"skincare":{"c":["Pink/White","Cream/Gold","Green/White","Lavender/White"],"i":["Product flat lays, skin close-ups, minimalist packaging for Skincare"]},"jewelry":{"c":["Gold/White","Silver/Black","Rose Gold/White","Gold/Black"],"i":["Jewelry flat lays, model wearing, detail shots for Jewelry Brand"]},"yoga":{"c":["Teal/White","Purple/Lavender","Green/White","Coral/White"],"i":["Studio sessions, outdoor practice, lifestyle shots for Yoga Studio"]},"spa":{"c":["Cream/Gold","White/Teal","Lavender/White","Stone/White"],"i":["Serene environments, treatments, product displays for Spa"]},"real estate":{"c":["Navy/Gold","Black/White","Blue/Silver","Brown/Cream"],"i":["Property exteriors, luxury interiors, lifestyle shots for Real Estate"]},"tech":{"c":["Blue/White","Black/Blue","Purple/White","Dark/Teal"],"i":["Interface mockups, workspace setups, product demos for Tech Brand"]},"education":{"c":["Blue/White","Green/White","Yellow/Blue","Orange/White"],"i":["Classroom settings, student engagement, campus shots for Education"]},"food":{"c":["Red/White","Orange/Brown","Green/White","Yellow/Orange"],"i":["Food close-ups, preparation shots, plating for Food Brand"]},"coaching":{"c":["Gold/Black","Blue/White","Orange/White","Purple/Gold"],"i":["One-on-one sessions, motivational settings, workshops for Coaching"]},"travel":{"c":["Teal/White","Blue/Gold","Orange/White","Green/Blue"],"i":["Destination shots, adventure photos, travel lifestyle for Travel Brand"]},"fitness":{"c":["Black/Red","Orange/Black","Blue/White","Green/Black"],"i":["Workout action shots, before/after, equipment for Fitness"]},"clothing":{"c":["Black/White","Beige/Brown","Navy/White","Red/White"],"i":["Flat lays, model shoots, detail textures for Clothing Brand"]},"wedding":{"c":["White/Gold","Blush/Gold","Ivory/Silver","Rose/White"],"i":["Ceremony setups, floral arrangements, couple portraits for Wedding"]},"music":{"c":["Black/Gold","Purple/Black","Red/Black","White/Black"],"i":["Studio sessions, live performances, artist portraits for Music Brand"]},"art":{"c":["White/Black","Cream/Gold","Colorful/White","Black/Gold"],"i":["Artwork displays, studio shots, creative process for Art Gallery"]}};
+
+/* ══════════════════════════════════════════════════════
+   BRAND ENGINE DATA
+══════════════════════════════════════════════════════ */
+const BE = {
+palettes:{'Minimal Modern':{'Luxury & Premium':{colors:['#1A1A2E','#C9A84C','#F5F5F0','#2C2C3E','#E8D5A3'],desc:'Deep navy with golden luxury accents on ivory'},'Bold & Energetic':{colors:['#FF3366','#FFFFFF','#111111','#00D4FF','#FFE600'],desc:'Electric magenta and cyan on stark black and white'},'Minimal & Modern':{colors:['#FAFAFA','#1A1A1A','#E5E5E5','#333333','#F0F0F0'],desc:'Ultra-clean monochrome with subtle grey layers'},'Warm & Friendly':{colors:['#FFF8F0','#FF8C42','#2D2D2D','#FFB374','#F5E6D3'],desc:'Warm peach and amber on creamy white'},'default':{colors:['#FFFFFF','#000000','#F5F5F5','#333333','#C9A84C'],desc:'Classic black and white with gold accent'}},'Vintage Cozy':{'Luxury & Premium':{colors:['#2B1810','#C9A84C','#F4E4C1','#8B6914','#D4A574'],desc:'Rich mahogany with antique gold on aged cream'},'Warm & Friendly':{colors:['#FDF8EE','#B8860B','#5C3317','#DEB887','#8B7355'],desc:'Golden wheat and saddle brown on warm linen'},'default':{colors:['#FDF8EE','#8B6914','#5C3317','#D4A574','#C9A84C'],desc:'Vintage gold, warm brown, and aged cream'}},'Dark Luxury':{'Luxury & Premium':{colors:['#0A0A0F','#C9A84C','#1A1A2E','#E8D5A3','#2C2C3E'],desc:'Pure black with molten gold on deep midnight'},'Bold & Energetic':{colors:['#0A0A0F','#FF2D55','#1A1A2E','#C9A84C','#FF6B6B'],desc:'Obsidian black with crimson fire and gold'},'Dark & Mysterious':{colors:['#05050A','#8B68C9','#0F0F1A','#C9A84C','#6B4ACB'],desc:'Abyss black with purple mystique and gold'},'default':{colors:['#0A0A0F','#C9A84C','#1A1A2E','#F0D080','#2C2C3E'],desc:'Jet black with premium gold accents'}},'Vibrant Pop':{'Bold & Energetic':{colors:['#FF3366','#FFE600','#00D4FF','#FF6B35','#7B2FBE'],desc:'Electric magenta, sunshine yellow, and neon cyan'},'Playful & Fun':{colors:['#FF6B6B','#4ECDC4','#FFE66D','#FF8A5C','#6C5CE7'],desc:'Coral, teal, sunshine, tangerine, and grape'},'default':{colors:['#FF3366','#FFE600','#00D4FF','#1A1A2E','#FF6B35'],desc:'Bold primaries with electric neon energy'}},'Bold Impact':{'Luxury & Premium':{colors:['#1A1A2E','#C9A84C','#8B1A1A','#F5F5F0','#4A0E0E'],desc:'Power black and gold with deep crimson'},'Bold & Energetic':{colors:['#FF0000','#000000','#FFFFFF','#FFE600','#FF3366'],desc:'Pure red and black with white — maximum impact'},'default':{colors:['#1A1A2E','#FF3366','#C9A84C','#F5F5F0','#0A0A0F'],desc:'Bold contrasts — dark, gold, and power pink'}}},
+typography:{'Minimal Modern':'Clean geometric sans-serif (Helvetica Neue / Inter / SF Pro) with thin weight accent','Vintage Cozy':'Classic serif (Playfair Display / Garamond) with hand-drawn script accents','Dark Luxury':'High-contrast serif (Didot / Bodoni) with refined sans-serif (Futura PT)','Vibrant Pop':'Bold rounded sans-serif (Poppins / Nunito) with playful display type','Bold Impact':'Heavy condensed sans-serif (Oswald / Impact) with clean body sans'},
+categories:{cars:'Premium Automotive & Car Brand',bakery:'Artisan Bakery & Patisserie',photography:'Creative Photography Studio',gym:'Premium Fitness & Training',fashion:'Fashion & Lifestyle Brand',cafe:'Specialty Coffee & Café',restaurant:'Fine Dining & Culinary',salon:'Beauty & Grooming Studio',tech:'Technology & Innovation',fitness:'Health & Fitness',education:'Education & Learning',realestate:'Premium Real Estate',agency:'Creative Agency',coaching:'Life & Business Coaching',jewelry:'Fine Jewelry & Accessories',wedding:'Wedding Planning & Events',travel:'Travel & Experiences',music:'Music & Entertainment',art:'Art & Design Studio',yoga:'Wellness & Yoga',spa:'Luxury Spa & Wellness',skincare:'Premium Skincare & Beauty',clothing:'Fashion & Apparel',gaming:'Gaming & Esports',food:'Gourmet Food & Culinary',default:'Premium Brand & Lifestyle'},
+personalities:{'Luxury & Premium':['Sophisticated','Exclusive','Timeless','Refined'],'Bold & Energetic':['Fearless','Dynamic','Unstoppable','Vibrant'],'Minimal & Modern':['Clean','Intentional','Focused','Elegant'],'Warm & Friendly':['Welcoming','Genuine','Heartfelt','Approachable'],'Elegant & Refined':['Graceful','Polished','Cultured','Tasteful'],'Edgy & Creative':['Rebellious','Innovative','Unconventional','Daring'],'Natural & Organic':['Authentic','Grounded','Sustainable','Pure'],'Playful & Fun':['Joyful','Spirited','Energetic','Colorful'],'Corporate & Professional':['Trusted','Authoritative','Reliable','Strategic'],'Dark & Mysterious':['Enigmatic','Alluring','Deep','Intriguing'],'default':['Premium','Authentic','Memorable','Distinctive']},
+tones:{'Luxury & Premium':'Refined, exclusive, and aspirational','Bold & Energetic':'Confident, punchy, and action-driven','Minimal & Modern':'Clean, direct, and understated','Warm & Friendly':'Conversational, heartfelt, and inviting','Elegant & Refined':'Graceful, measured, and sophisticated','Edgy & Creative':'Irreverent, witty, and boundary-pushing','Natural & Organic':'Gentle, honest, and earthy','Playful & Fun':'Upbeat, witty, and lighthearted','Corporate & Professional':'Authoritative, clear, and trustworthy','Dark & Mysterious':'Evocative, cryptic, and atmospheric','default':'Confident, authentic, and memorable'},
+hindiTaglines:{luxury:['बेहतरीन क्वालिटी, हमेशा','आपके लिए सबसे अच्छा','शान से भरपूर'],bold:['हिम्मत से आगे बढ़ो','बड़ा सोचो, बड़ा करो','ताकत हर कदम पर'],warm:['दिल से बना, आपके लिए','अपनापन हर बार','प्यार से बनाया'],minimal:['सादा और बेहतर','कम में खास','सिर्फ जरूरी बातें'],edgy:['अलग सोचो, अलग बनो','रूल तोड़ो','भीड़ से अलग'],nature:['प्रकृति का उपहार','शुद्ध और असली','कुदरत से जुड़ा'],default:['भरोसे का नाम','आपकी पसंद, हमारी जिम्मेदारी','सबसे बेहतर']}
+};
+
+/* ══════════════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════════════ */
+function R(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function detectNiche(biz){
+  const b=biz.toLowerCase();
+  const map={cars:['car','auto','automobile','vehicle','motor','drive','wheel','garage','dealership','showroom'],bakery:['bake','cake','pastry','bread','cookie','cupcake','patisserie','dessert','sweet'],photography:['photo','camera','portrait','studio photo','film','cinemat'],gym:['gym','workout','crossfit','weight','bodybuilding','muscle'],fashion:['fashion','cloth','apparel','wear','boutique','garment','outfit','dress'],cafe:['cafe','coffee','chai','tea house','espresso','latte'],restaurant:['restaurant','food','dine','dining','eatery','kitchen','bistro','grill','dhaba'],salon:['salon','beauty','hair','nail','groom','barber','parlour','makeup'],tech:['tech','software','app','digital','web','code','saas','startup','ai','data'],fitness:['fitness','fit','train','health','yoga','pilates','athlet','sport'],education:['education','learn','tutor','coach','academy','school','teach','mentor','course'],realestate:['real estate','property','home','house','apartment','villa','land','interior'],agency:['agency','market','brand','design','creative','consult','advertis','media'],coaching:['coaching','mentor','motivat','life coach','business coach'],jewelry:['jewel','gold','diamond','silver','ornament'],wedding:['wedding','bridal','event','celebrat','party'],travel:['travel','tour','trip','holiday','adventure','explore'],music:['music','band','song','record','audio','sound','dj','beat'],art:['art','paint','sketch','draw','illustration','gallery'],yoga:['yoga','meditation','mindful','ayurved','holistic'],spa:['spa','massage','relax','wellness','retreat'],skincare:['skincare','skin','serum','glow','derma','cosmetic'],clothing:['t-shirt','tshirt','hoodie','streetwear','sneaker','shoe'],gaming:['gaming','game','esport','stream'],food:['gourmet','organic','meal','recipe','spice','masala','pickle']};
+  for(const niche in map){if(map[niche].some(k=>b.includes(k)))return niche;}
+  return'default';
+}
+
+function getNicheData(biz){
+  const b=biz.toLowerCase();
+  const keys=Object.keys(NICHE_DB).sort((a,b)=>b.length-a.length);
+  for(const key of keys){if(b.includes(key))return NICHE_DB[key];}
+  return null;
+}
+
+/* ══════════════════════════════════════════════════════
+   BRAND NAME GENERATOR — SIMPLE INDIAN-FRIENDLY
+══════════════════════════════════════════════════════ */
+function generateBrandName(firstName, biz, excludeNames) {
+  const letter = firstName.charAt(0).toUpperCase();
+  const niche = detectNiche(biz);
+
+  const prefixWords = {
+    cars:['Drive','Speed','Vroom','Shift','Turbo','Apex','Volt','Zoom','Rev','Race','Bold','Prime','Steel','Crest','Gear'],
+    bakery:['Fresh','Sweet','Golden','Quick','Tasty','Smart','Daily','Best','City','True'],
+    cafe:['Brew','Bean','Sip','Quick','Daily','City','Fresh','Cozy','True','Easy'],
+    gym:['Fit','Power','Strong','Iron','Peak','Trust','Core','Pro','Max','Bold'],
+    fitness:['Fit','Active','Power','Flex','Core','Trust','Pro','Peak','Smart','Max'],
+    salon:['Glow','Style','Quick','Fresh','True','Smart','Star','Shine','Care','Pure'],
+    restaurant:['Taste','Fresh','Spice','Quick','Daily','City','True','Best','Royal','Smart'],
+    photography:['Click','Snap','Frame','Pixel','Focus','Flash','Lens','Shot','Pro','Clear'],
+    fashion:['Style','Trend','Urban','Smart','True','City','Fresh','Bold','Star','Easy'],
+    tech:['Quick','Smart','Byte','Node','Net','Code','Digi','Link','Pro','Next'],
+    education:['Learn','Smart','Bright','Skill','Mind','True','Best','Path','Step','Pro'],
+    realestate:['Home','Trust','City','Smart','True','Best','Prime','Value','Safe','Sure'],
+    coaching:['Mind','Path','Step','Guide','Smart','True','Best','Pro','Peak','Rise'],
+    jewelry:['Gold','Shine','Star','True','Pure','Royal','Fine','Bright','Gem','Luxe'],
+    wedding:['Dream','Star','Royal','True','Best','Grand','Pure','Happy','Joy','Love'],
+    travel:['Trip','Go','Ride','Path','Wander','Trek','Route','Easy','Quick','Next'],
+    music:['Beat','Tune','Sound','Vibe','Play','Mix','Jam','Bass','Echo','Wave'],
+    art:['Color','Draw','Craft','Frame','Bold','True','Pure','Free','Form','Line'],
+    yoga:['Zen','Calm','Pure','Peace','Flow','Soul','True','Mind','Care','Easy'],
+    spa:['Glow','Calm','Pure','Bliss','Care','Fresh','Soft','True','Easy','Zen'],
+    skincare:['Glow','Pure','Fresh','Care','Soft','True','Clear','Shine','Bloom','Silk'],
+    clothing:['Wear','Style','Urban','Thread','Stitch','True','Fresh','Bold','Smart','Trend'],
+    food:['Taste','Bite','Spice','Fresh','Quick','Daily','Yum','True','Best','Smart'],
+    default:['Smart','True','Best','Quick','Fresh','City','Pro','Star','Easy','Value']
+  };
+
+  const suffixWords = {
+    cars:['Auto','Motors','Drive','Wheels','Lane','Gear','Hub','Works','Zone','Co'],
+    bakery:['Bite','Bake','Treat','Crust','Box','Cart','Hub','Point','Zone','Mart'],
+    cafe:['Cup','Cafe','Spot','Den','Hub','Point','Stop','Zone','Corner','Nest'],
+    gym:['Zone','Hub','Den','Lab','Point','Gym','Club','Base','Arena','Box'],
+    fitness:['Zone','Hub','Lab','Club','Base','Point','Track','Edge','Gym','Box'],
+    salon:['Cut','Hub','Studio','Spot','Touch','Point','Zone','Box','Den','Bar'],
+    restaurant:['Bite','Plate','Table','Hub','Spot','Den','Kitchen','Point','Box','Grill'],
+    photography:['Studio','Lab','Hub','Box','Point','Den','Zone','Works','Co','Spot'],
+    fashion:['Wear','Hub','Studio','Box','Point','Den','Zone','Store','Co','Mart'],
+    tech:['Hub','Lab','Box','Point','Base','Zone','Works','Co','Dev','Stack'],
+    education:['Hub','Lab','Zone','Point','Base','Box','Class','Desk','Co','Den'],
+    realestate:['Hub','Point','Nest','Base','Zone','Mart','Co','Den','Spot','Home'],
+    coaching:['Hub','Lab','Zone','Point','Base','Co','Den','Pro','Path','Class'],
+    jewelry:['Hub','Box','Point','Store','Zone','Mart','Den','Co','Works','Art'],
+    wedding:['Hub','Point','Plan','Box','Zone','Co','Day','Nest','Studio','Spot'],
+    travel:['Go','Hub','Trip','Point','Zone','Way','Box','Co','Pass','Base'],
+    music:['Hub','Lab','Box','Den','Zone','Studio','Co','Works','Base','Spot'],
+    art:['Hub','Lab','Studio','Box','Zone','Works','Co','Den','Space','Spot'],
+    yoga:['Hub','Studio','Zone','Den','Space','Base','Spot','Nest','Co','Point'],
+    spa:['Hub','Studio','Zone','Den','Touch','Point','Nest','Spot','Co','Base'],
+    skincare:['Hub','Lab','Box','Co','Zone','Care','Studio','Point','Den','Spot'],
+    clothing:['Hub','Co','Box','Store','Zone','Mart','Den','Spot','Point','Studio'],
+    food:['Bite','Hub','Box','Kitchen','Point','Zone','Cart','Den','Spot','Mart'],
+    default:['Hub','Zone','Point','Box','Co','Den','Mart','Base','Pro','Spot']
+  };
+
+  const inventedShort = [
+    'Vayo','Zuno','Nyka','Kobi','Tavo','Rizo','Mojo','Piko','Duro','Fizo',
+    'Kivo','Lumo','Nexa','Opta','Suno','Velo','Zest','Brio','Curo','Dezi',
+    'Fino','Grit','Halo','Inka','Juno','Kaya','Livo','Mika','Novo','Orbi',
+    'Pura','Qvik','Reva','Savi','Tiko','Urbo','Vika','Wizo','Xeno','Yolo',
+    'Zumo','Aero','Bolt','Crux','Dash','Elvo','Flux','Hyve','Izio','Jolt',
+    'Kyro','Lynk','Mint','Niva','Onyx'
+  ];
+
+  const prefPool = prefixWords[niche] || prefixWords['default'];
+  const sufPool = suffixWords[niche] || suffixWords['default'];
+  const excludeLower = (excludeNames || []).map(n => n.toLowerCase());
+
+  let candidates = [];
+
+  // Prefix+Suffix joined
+  for(let i=0;i<30;i++){const p=R(prefPool),s=R(sufPool);if(p!==s)candidates.push(p+s);}
+  // Prefix+Suffix with space
+  for(let i=0;i<15;i++){const p=R(prefPool),s=R(sufPool);if(p!==s)candidates.push(p+' '+s);}
+  // Invented words matching user letter
+  const letterMatch = inventedShort.filter(w => w.charAt(0).toUpperCase()===letter);
+  const letterOther = inventedShort.filter(w => w.charAt(0).toUpperCase()!==letter);
+  candidates = candidates.concat(letterMatch);
+  for(let i=0;i<10;i++) candidates.push(R(letterOther));
+  // Short invented + suffix
+  for(let i=0;i<10;i++){
+    const s=R(sufPool);const v=R(['a','e','i','o','u']);const c=R(['n','r','l','m','v','k','z','t','p']);
+    const w=letter+v+c+v;candidates.push(w.charAt(0).toUpperCase()+w.slice(1));
+    candidates.push(w.charAt(0).toUpperCase()+w.slice(1)+' '+s);
+  }
+
+  candidates = candidates.filter(c=>{
+    const clean=c.replace(/[^a-zA-Z\s]/g,'').trim();
+    return clean.length>=3&&clean.length<=18&&!excludeLower.includes(clean.toLowerCase());
+  });
+
+  const seen={};const unique=[];
+  candidates.forEach(c=>{const k=c.toLowerCase();if(!seen[k]){seen[k]=true;unique.push(c);}});
+  shuffle(unique);
+  return unique[0]||letter+'ivo';
+}
+
+function getPalette(theme,vibe){
+  const themeP=BE.palettes[theme]||BE.palettes['Dark Luxury'];
+  return themeP[vibe]||themeP['default']||Object.values(themeP)[0];
+}
+
+function getVibeKey(vibe){
+  if(!vibe)return'default';
+  const v=vibe.toLowerCase();
+  if(v.includes('luxury')||v.includes('premium'))return'luxury';
+  if(v.includes('bold')||v.includes('energetic'))return'bold';
+  if(v.includes('warm')||v.includes('friendly'))return'warm';
+  if(v.includes('minimal')||v.includes('modern'))return'minimal';
+  if(v.includes('edgy')||v.includes('creative'))return'edgy';
+  if(v.includes('natural')||v.includes('organic'))return'nature';
+  return'default';
+}
+
+function generateMeaning(brandName, biz, niche) {
+  const nicheLabel = (BE.categories[niche] || BE.categories['default']).toLowerCase();
+  const values = ['trust','quality','speed','care','value','freshness','reliability','simplicity'];
+  const feelings = ['confidence','comfort','satisfaction','happiness','trust','energy'];
+  const promises = ['giving customers the best experience every time','making every visit worth remembering','building a brand people can trust','delivering quality that speaks for itself','creating something simple yet powerful','making things easy and enjoyable for everyone'];
+  const templates = [
+    `"${brandName}" stands for ${R(values)} and ${R(values)}. As a ${nicheLabel} brand, it promises ${R(promises)}. The name is easy to say, easy to remember, and creates a feeling of ${R(feelings)}.`,
+    `The name "${brandName}" reflects ${R(values)} in the ${nicheLabel} space. It's short, clear, and feels like ${R(feelings)}. This brand is about ${R(promises)}.`,
+    `"${brandName}" captures the spirit of ${R(values)} — a brand built on ${R(promises)}. For ${nicheLabel}, it brings a sense of ${R(feelings)} that customers connect with instantly.`
+  ];
+  return R(templates);
+}
+
+/* ══════════════════════════════════════════════════════
+   CLAUDE API — PINTEREST-INSPIRED PROMPT GENERATION
+══════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════
+   PINTEREST NICHE COLOR INTELLIGENCE
+══════════════════════════════════════════════════════ */
+const PINTEREST_NICHE_COLORS = {
+  cars:        {surface:'deep charcoal asphalt with tyre-track texture','bg1':'#0D0D0D','bg2':'#1C1C1C','accent':'#D4AF37','hi':'#F5F5F5',mood:'low-key moody garage lighting, xenon blue rim-light, cinematic lens flare',scene:'sleek sports car parked on empty highway at dusk, chrome reflects golden skyline'},
+  bakery:      {surface:'aged white marble with flour dusting','bg1':'#FDF8EE','bg2':'#F5E6C8','accent':'#B5541C','hi':'#1A0A00',mood:'warm morning window light, steam rising, soft bokeh',scene:'artisan sourdough loaves on linen cloth, fresh herbs scattered'},
+  cafe:        {surface:'dark oak wood table with coffee ring stains','bg1':'#1C1006','bg2':'#2D1B0A','accent':'#D4A017','hi':'#FDF4E7',mood:'cosy amber lamp glow, morning steam wisps, editorial calm',scene:'ceramic cup with latte art, espresso bar reflection, roasted beans scattered'},
+  gym:         {surface:'black rubberised gym floor','bg1':'#0A0A0A','bg2':'#1A1A1A','accent':'#E53935','hi':'#FFFFFF',mood:'dramatic side key-light, motivational grit, high-contrast',scene:'barbell chalk explosion close-up, determination in every drop'},
+  salon:       {surface:'rose-tinted Italian marble','bg1':'#FFF0F3','bg2':'#F9D8DF','accent':'#B5124B','hi':'#1A0010',mood:'soft diffused salon window light, mirror bokeh',scene:'luxury brush tools arranged on marble counter, petal drops around'},
+  fashion:     {surface:'brushed concrete with fashion chalk marks','bg1':'#F5F5F0','bg2':'#E8E0D5','accent':'#1A1A1A','hi':'#C9A84C',mood:'editorial studio strobe, clean shadows, Vogue aesthetic',scene:'clothing draped over minimal chair, perfect morning light'},
+  skincare:    {surface:'white linen with dried botanicals','bg1':'#FAFAF5','bg2':'#EDF0E8','accent':'#5A7A4A','hi':'#1A2810',mood:'clean diffused north light, product glow, clinical elegance',scene:'serum bottle with dew drops, eucalyptus leaves, glass glow'},
+  photography: {surface:'dark studio seamless paper','bg1':'#0F0F0F','bg2':'#1E1E1E','accent':'#C9A84C','hi':'#F0F0F0',mood:'dramatic beauty dish overhead, catchlights sharp, cinematic',scene:'vintage film camera on leather surface, contact strips in background'},
+  restaurant:  {surface:'dark walnut dining table, candlelight flicker','bg1':'#1A0F00','bg2':'#2C1A00','accent':'#C9A84C','hi':'#FFF8E7',mood:'warm restaurant candle glow, bokeh wine glasses, fine dining',scene:'gourmet plating close-up, micro herbs on sauce art, silverware gleam'},
+  jewelry:     {surface:'black velvet jewellery display tray','bg1':'#0A0A0A','bg2':'#111111','accent':'#D4AF37','hi':'#FFFFFF',mood:'precision ring-light catchlight, diamond fire, dark elegance',scene:'gold ring resting on velvet, diamond sparkle catching studio light'},
+  realestate:  {surface:'white Carrara marble floor, morning light','bg1':'#F8F8F6','bg2':'#E8E5DF','accent':'#2C3E50','hi':'#C9A84C',mood:'golden hour window light, luxury interior warmth, architectural pride',scene:'expansive glass facade of luxury home, reflection pool foreground'},
+  yoga:        {surface:'natural linen yoga mat, palo santo smoke','bg1':'#F5F0E8','bg2':'#E8DDD0','accent':'#8B6914','hi':'#2C1A00',mood:'gentle morning fog, golden hour studio window, zen stillness',scene:'yoga mat unrolled in misty forest clearing, sunrise silhouette'},
+  spa:         {surface:'white stone pebbles, eucalyptus steam','bg1':'#F2F0EC','bg2':'#E0DDD5','accent':'#8A9E8A','hi':'#1A1A1A',mood:'warm humidity haze, candle flicker, absolute tranquility',scene:'bamboo tray with herbal oils, white towels folded, orchid floating in water bowl'},
+  tech:        {surface:'brushed aluminium dark desk, LED ambient','bg1':'#0A0E1A','bg2':'#0F1825','accent':'#00C9FF','hi':'#FFFFFF',mood:'blue LED rim light, glass screen glow, futuristic clean',scene:'slim laptop open with glowing UI, dark studio, neon reflections'},
+  education:   {surface:'aged teak wooden desk, soft lamp','bg1':'#FFF9F0','bg2':'#F5EDD8','accent':'#2C5F2E','hi':'#1A0A00',mood:'warm study lamp glow, pages turning, academic warmth',scene:'open notebook with handwritten notes, stacked books, morning coffee steam'},
+  default:     {surface:'dark marble with gold veining','bg1':'#0A0A0F','bg2':'#1A1A2E','accent':'#C9A84C','hi':'#F5F5F0',mood:'soft overhead studio light, editorial luxury',scene:'brand product on luxury surface, premium lifestyle setting'}
+};
+
+function getNicheColorContext(biz) {
+  const b = biz.toLowerCase();
+  for (const key of Object.keys(PINTEREST_NICHE_COLORS)) {
+    if (b.includes(key)) return PINTEREST_NICHE_COLORS[key];
+  }
+  return PINTEREST_NICHE_COLORS.default;
+}
+
+async function generatePinterestPrompts(brandName, biz, vibe, theme, palette, niche, firstLetter) {
+  const c = palette.colors;
+  const nicheData = getNicheData(biz);
+  const datasetColors = nicheData ? nicheData.c.slice(0, 3).join(', ') : '';
+  const nicheCtx = getNicheColorContext(biz);
+
+  const systemPrompt = `You are a world-class Pinterest visual director and brand photographer. You create image prompts that produce results that dominate the most-saved content on Pinterest.
+
+Your prompts must:
+- Read like a professional art director's brief to a top photographer
+- Include exact surface texture, material, lighting setup, and camera details
+- Use the Pinterest niche color intelligence provided — these colors are proven to work for this niche on Pinterest
+- Be ultra-specific: no vague language like "beautiful" or "nice" — use precise visual language
+- Each prompt: 130–200 words. Rich, cinematic, specific
+- NO collages, NO split screens, SINGLE image per prompt
+- Embed brand name "${brandName}" naturally and correctly
+
+PINTEREST NICHE INTELLIGENCE FOR THIS BUSINESS (${biz}):
+- Proven surface: ${nicheCtx.surface}
+- Pinterest dominant colors for this niche: ${nicheCtx.bg1}, ${nicheCtx.bg2}, ${nicheCtx.accent}, ${nicheCtx.hi}
+- Dataset industry colors: ${datasetColors}
+- Lighting mood that works: ${nicheCtx.mood}
+- Scene reference: ${nicheCtx.scene}
+
+BRAND COLOR PALETTE (must use alongside niche colors):
+Primary: ${c[0]}, Accent: ${c[1]}, Supporting: ${c[2]}, ${c[3]||''}, ${c[4]||''}
+Style: ${theme} | Vibe: ${vibe}
+
+LOGO RULES (Image 1 only):
+- Icon must CLEARLY represent ${biz} — recognizable symbol first
+- Letter "${firstLetter}" hidden INSIDE icon via negative space, curves, or structural design
+- Example: car brand → steering wheel with "${firstLetter}" in spoke gap; gym → dumbbell shaped into "${firstLetter}"
+- White/transparent background, vector-crisp
+
+Return ONLY a valid JSON array of exactly 8 objects. Each object: { "title": string, "prompt": string, "ratio": string }
+Ratios: Image1=1:1, Image2=3:2, Image3=16:9, Image4=9:16, Image5=16:9, Image6=4:3, Image7=1:1, Image8=2:3`;
+
+  const userMessage = `Generate 8 ultra-rich Pinterest-quality brand image prompts for "${brandName}" — a ${biz} brand.
+
+Image 1: BRAND LOGO DESIGN [1:1]
+Single clean vector logo. Icon represents ${biz}. Hidden letter "${firstLetter}" in icon. Wordmark "${brandName}". Pure white bg.
+
+Image 2: BUSINESS CARD MOCKUP [3:2]  
+Two luxury cards at angle on ${nicheCtx.surface}. Foil stamping, real card thickness, studio overhead light.
+
+Image 3: WEBSITE HOMEPAGE [16:9]
+Full browser screenshot — live, pixel-perfect website. Hero lifestyle image for ${biz}. MacBook Pro at 15° angle. Awwwards-quality.
+
+Image 4: MOBILE APP UI [9:16]
+iPhone 15 Pro 3D render showing "${brandName}" app. Fully designed UI, not wireframe. Dribbble-featured quality.
+
+Image 5: BILLBOARD ADVERTISEMENT [16:9]
+Photorealistic urban billboard at ${nicheCtx.mood} hour. Real steel structure, blurred city background, cinematic 35mm quality.
+
+Image 6: BRAND STATIONERY FLAT LAY [4:3]
+Overhead flat-lay on ${nicheCtx.surface}. Full stationery collection. Sony A7R IV, 50mm, f/4 aesthetic.
+
+Image 7: INSTAGRAM SOCIAL POST [1:1]
+Feed-worthy editorial lifestyle moment for ${biz}. Real scene, aspirational, thousands-of-saves quality. Color grade: ${nicheCtx.mood}.
+
+Image 8: BRAND ATMOSPHERE POSTER [2:3]
+Cinematic A2 portrait poster. "${brandName}" at bottom third, Hindi tagline above, logo at top. Kinfolk / Cereal magazine quality.
+
+Each prompt must feel like the most-pinned brand visual on Pinterest. Cinema-grade detail, niche-specific colors, professional lighting.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }]
+      })
+    });
+
+    const data = await response.json();
+    if (!data.content || !data.content[0]) throw new Error('No response from Claude');
+
+    let text = data.content[0].text || '';
+    text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const startIdx = text.indexOf('[');
+    const endIdx = text.lastIndexOf(']');
+    if (startIdx === -1 || endIdx === -1) throw new Error('Invalid JSON format');
+    text = text.substring(startIdx, endIdx + 1);
+
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed) || parsed.length < 6) throw new Error('Insufficient prompts returned');
+    return parsed;
+  } catch (err) {
+    console.error('Claude API error:', err);
+    return null;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   LOCAL FALLBACK PROMPT GENERATION
+══════════════════════════════════════════════════════ */
+function buildLocalPrompts(bn, inp, palette, theme, vibe, fl, niche) {
+  const c = palette.colors;
+  const cd = palette.desc;
+  const typo = BE.typography[theme] || BE.typography['Dark Luxury'];
+  const nc = getNicheColorContext(inp.biz);
+  return [
+    {title:'Brand Logo Design',ratio:'1:1',prompt:`SINGLE IMAGE ONLY. Clean, modern brand logo for "${bn}" — a ${inp.biz} business. The logo has TWO parts: 1) A simple, bold icon that clearly represents ${inp.biz} (use the most iconic objects/tools/symbols of this business). 2) The letter "${fl}" (first letter of owner name "${inp.name}") must be HIDDEN inside the icon — use negative space, curves, or structural design to embed it subtly. Examples: car brand → steering wheel with "${fl}" in spoke gap; gym → dumbbell shaped into "${fl}"; salon → scissors forming "${fl}". The icon must look like a ${inp.biz} symbol FIRST. Below the icon: wordmark "${bn}" in ${typo}. Colors: ${c[0]} icon, ${c[1]} accent, pure white background. Style: ${theme}. Simple, bold, iconic. Ultra-crisp vector quality, 4K. Spell "${bn}" perfectly. No collage.`},
+    {title:'Business Card Design',ratio:'3:2',prompt:`SINGLE IMAGE ONLY. Two luxury business cards for "${bn}" — front and back — at 35° angle on ${nc.surface}. Front: matte ${c[0]} 600gsm stock, logo in ${c[1]} foil stamp, owner name '${inp.name}' in elegant serif. Back: full ${c[1]} background, large white logo centered, spot UV finish. Foil edges catching studio light. Lighting: ${nc.mood}. Luxury print studio photograph. 4K. Single image only.`},
+    {title:'Website Homepage',ratio:'16:9',prompt:`SINGLE IMAGE ONLY. Full browser screenshot of "${bn}" website homepage — a ${inp.biz} brand. Theme: ${theme}. Hero: full-width lifestyle image (${nc.scene}), bold editorial serif headline 50px, CTA button in ${c[1]}. Navigation: clean minimal bar with brand logo. Color system: ${cd}. Below fold: 3-column features grid. Live, real-looking design. Shown on MacBook Pro 16-inch at 15° angle, studio desk. Awwwards-quality. 4K. Spell "${bn}" perfectly. Single image.`},
+    {title:'Mobile App UI',ratio:'9:16',prompt:`SINGLE IMAGE ONLY. iPhone 15 Pro in space black at 10° angle displaying "${bn}" app — a ${inp.biz} brand. UI: welcome header "Welcome to ${bn}", brand logo in nav bar, hero card showing ${nc.scene}, bottom tab bar 5 icons, floating action button in ${c[1]}. Colors: ${c[0]} bg, ${c[1]} accents, ${c[2]} cards, 16px corners. Clean drop shadow on ${theme} gradient background. Dribbble-quality. 4K. Single image.`},
+    {title:'Billboard Advertisement',ratio:'16:9',prompt:`SINGLE IMAGE ONLY. Large outdoor billboard for "${bn}" — ${inp.biz} brand — on urban road at ${nc.mood}. Billboard: lifestyle image (${nc.scene}) on left two-thirds, solid ${c[0]} panel right, bold white serif headline max 5 words, "${bn}" logo bottom-right. Real steel structure, blurred city background. Cinematic 35mm quality, natural grain. Must look like a real photograph. 4K. Single image.`},
+    {title:'Brand Stationery Flat Lay',ratio:'4:3',prompt:`SINGLE IMAGE ONLY. Overhead flat-lay of "${bn}" brand stationery on ${nc.surface}. Items: A4 letterhead with logo header, branded envelope with ${c[1]} wax seal, business card front and back, A5 hardcover notebook with embossed "${bn}" logo, premium pen with ${c[1]} barrel, tissue paper with subtle "${bn}" repeat pattern, gift tag. Color system: ${cd}. Lighting: ${nc.mood}, soft window from upper-left. Sony A7R IV, 50mm, f/4. Pinterest flat-lay. 4K. Single image.`},
+    {title:'Instagram Social Post',ratio:'1:1',prompt:`SINGLE IMAGE ONLY. 1080×1080px Instagram feed post for "${bn}" — ${inp.biz} brand. Scene: ${nc.scene}. Aspirational, editorial, curated — not stock. Brand logo small watermark bottom-right. Bold headline overlay max 4 words in ${typo}. Color grade: ${cd}, ${nc.mood}. Rule of thirds composition. The kind of post that gets thousands of saves. 4K. Single image.`},
+    {title:'Brand Atmosphere Poster',ratio:'2:3',prompt:`SINGLE IMAGE ONLY. Cinematic A2 portrait poster (2:3) for "${bn}" — ${inp.biz} brand. Atmospheric lifestyle environment: ${nc.scene}. Color grade: ${cd}, ${theme} filmic treatment, ${nc.mood}. Typography layout: large editorial serif brand name "${bn}" at bottom third, small italic tagline above, minimalist logo mark at very top. Gallery art quality — Vogue / Kinfolk / Cereal magazine aesthetic. 4K. Spell "${bn}" perfectly. Single image.`}
+  ];
+}
+
+/* ══════════════════════════════════════════════════════
+   MAIN GENERATE FUNCTION
+══════════════════════════════════════════════════════ */
+async function generateBrand(inp, excludeNames) {
+  const niche = detectNiche(inp.biz);
+  const brandName = generateBrandName(inp.name, inp.biz, excludeNames);
+  const vibe = inp.vibe || 'Luxury & Premium';
+  const theme = inp.theme || 'Dark Luxury';
+  const palette = getPalette(theme, vibe);
+  const vibeKey = getVibeKey(vibe);
+  const firstLetter = inp.name.charAt(0).toUpperCase();
+  const colorStr = palette.desc + ' — ' + palette.colors.join(', ');
+  const category = BE.categories[niche] || BE.categories['default'];
+  const audience = inp.audience || 'Discerning individuals who value quality, aesthetics, and premium experiences';
+  const personality = shuffle((BE.personalities[vibe] || BE.personalities['default']).slice()).slice(0, 3).join(', ');
+  const tone = BE.tones[vibe] || BE.tones['default'];
+  const typo = BE.typography[theme] || BE.typography['Dark Luxury'];
+  const hashBase = ['#' + brandName.replace(/[^a-zA-Z]/g, ''), '#' + inp.biz.replace(/\s+/g, '') + 'Brand', '#BrandIdentity', '#MadeBy' + inp.name.replace(/\s+/g, ''), '#SmallBusiness', '#IndianBrand'];
+
+  function isHindiText(str){ return /[\u0900-\u097F]/.test(str); }
+
+  async function generateSmartTagline(brandName, biz, vibe){
+    const isHindi = isHindiText(brandName);
+    const lang = isHindi ? 'Hindi (Devanagari script)' : 'Hindi (Devanagari script)';
+    const t = vibe || 'Premium';
+    const systemPrompt = `You are a master brand copywriter for Indian businesses. Return ONLY the tagline — no quotes, no explanation, no extra words.
+
+Rules:
+1. The tagline MUST feel like it belongs to THIS specific brand name AND this specific business
+2. Use wordplay, alliteration, or meaning from the brand name if possible — make the tagline feel CONNECTED to the brand name
+3. Be specific to the ${biz} business — never generic
+4. Keep it 4–7 words, punchy and memorable
+5. Write in Hindi (Devanagari script) — simple words any Indian can understand
+6. The tagline should make someone say "wow, that fits perfectly"
+
+Examples of CONNECTED taglines:
+- Brand "Zest Bakes" → "हर केक में जोश है"  (uses brand energy)
+- Brand "SoulFit Gym" → "जहाँ जीत खुद आती है"  (fitness + soul meaning)
+- Brand "Secaya Cars" → "रफ़्तार, जो आपकी है"  (speed that belongs to you)`;
+    const userMsg = `Brand name: "${brandName}"
+Business: ${biz}
+Vibe: ${t}
+
+Write ONE Hindi tagline (4–7 words) that:
+1. Feels directly connected to the brand name "${brandName}" — use its sound, meaning, or personality
+2. Is specific to ${biz} — not generic brand-speak
+3. Is simple Hindi any person can understand
+4. Feels premium and memorable
+
+Return ONLY the tagline. Nothing else.`;
+    try{
+      const res = await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:80,system:systemPrompt,messages:[{role:'user',content:userMsg}]})
+      });
+      const d = await res.json();
+      const tagline = (d.content&&d.content[0]&&d.content[0].text||'').trim().replace(/^["'""'']|["'""'']$/g,'');
+      if(tagline.length>2)return tagline;
+    }catch(e){console.error('Tagline API error:',e);}
+    if(isHindi){const fb=BE.hindiTaglines[getVibeKey(vibe)]||BE.hindiTaglines['default'];return R(fb);}
+    return R(['Quality you can trust','Your brand, your way','Made for the best','Simple. Smart. Yours.','Built for you']);
+  }
+
+  updateLoadingMsg('Consulting Pinterest trends with Claude AI…');
+  let [prompts, smartTagline] = await Promise.all([
+    generatePinterestPrompts(brandName, inp.biz, vibe, theme, palette, niche, firstLetter),
+    generateSmartTagline(brandName, inp.biz, vibe)
+  ]);
+
+  let usedAPI = false;
+  if (prompts && prompts.length >= 6) {
+    usedAPI = true;
+    updateLoadingMsg('Crafting your brand story…');
+  } else {
+    updateLoadingMsg('Generating brand identity locally…');
+    prompts = buildLocalPrompts(brandName, inp, palette, theme, vibe, firstLetter, niche);
+  }
+
+  return {
+    brandName, hindiTagline: smartTagline, category, meaning: generateMeaning(brandName, inp.biz, niche),
+    personality, tone, audience, colorPalette: colorStr, typography: typo,
+    hashtags: hashBase.slice(0, 6), prompts, usedAPI,
+    nicheData: getNicheData(inp.biz)
+  };
+}
+
+/* ══════════════════════════════════════════════════════
+   AUTH
+══════════════════════════════════════════════════════ */
+const EMAILJS_PUBLIC_KEY  = 'mc5y6stTauLahDnph';
+const EMAILJS_SERVICE_ID  = 'service_9rocn0d';
+const EMAILJS_TEMPLATE_ID = 'template_q7brjt9';
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+function generateOTPCode(){return String(Math.floor(100000+Math.random()*900000));}
+
+async function sendOTP(){
+  const email=document.getElementById('authEmail').value.trim().toLowerCase();
+  if(!email||!email.includes('@')||!email.includes('.')){setAuthMsg('authMsg','Please enter a valid email.','error');return;}
+  const btn=document.getElementById('authSendBtn');btn.disabled=true;btn.textContent='Sending…';
+  otpEmail=email;generatedOTP=generateOTPCode();otpExpiry=Date.now()+5*60*1000;
+  try{
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {to_email:email,otp_code:generatedOTP,brand_name:'BrandedByShiv',expiry_minutes:'5'});
+    btn.disabled=false;btn.textContent='Send Verification Code';
+    document.getElementById('authEmailStep').style.display='none';
+    document.getElementById('authOtpStep').style.display='block';
+    document.getElementById('authEmailDisplay').textContent=email;
+    document.getElementById('authStep1').className='auth-step done';
+    document.getElementById('authStep2').className='auth-step active';
+    document.querySelectorAll('.auth-otp-digit')[0].focus();
+    setAuthMsg('authOtpMsg','A 6-digit code has been sent to your email.','success');
+  }catch(err){
+    btn.disabled=false;btn.textContent='Send Verification Code';
+    setAuthMsg('authMsg','Failed to send code. Please try again.','error');
+  }
+}
+function resendOTP(){
+  document.getElementById('authResend').classList.add('disabled');
+  generatedOTP=generateOTPCode();otpExpiry=Date.now()+5*60*1000;
+  emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{to_email:otpEmail,otp_code:generatedOTP,brand_name:'BrandedByShiv',expiry_minutes:'5'}).then(()=>{setAuthMsg('authOtpMsg','New code sent!','success');}).catch(()=>{setAuthMsg('authOtpMsg','Failed to resend.','error');});
+  setTimeout(()=>document.getElementById('authResend').classList.remove('disabled'),30000);
+}
+function backToEmail(){
+  document.getElementById('authEmailStep').style.display='block';
+  document.getElementById('authOtpStep').style.display='none';
+  document.getElementById('authStep1').className='auth-step active';
+  document.getElementById('authStep2').className='auth-step';
+  setAuthMsg('authMsg','','');
+}
+async function verifyOTP(){
+  const digits=document.querySelectorAll('.auth-otp-digit');let code='';
+  digits.forEach(d=>code+=d.value);
+  if(code.length!==6){setAuthMsg('authOtpMsg','Enter the full 6-digit code.','error');return;}
+  if(Date.now()>otpExpiry){setAuthMsg('authOtpMsg','Code expired. Click Resend.','error');return;}
+  if(code!==generatedOTP){setAuthMsg('authOtpMsg','Incorrect code. Try again.','error');return;}
+  const btn=document.getElementById('authVerifyBtn');btn.disabled=true;btn.textContent='Signing in…';
+  try{
+    const pw='BBS_'+otpEmail.split('@')[0]+'_'+otpEmail.length+'_secure2025';
+    try{await auth.signInWithEmailAndPassword(otpEmail,pw);}
+    catch(e){if(e.code==='auth/user-not-found'||e.code==='auth/invalid-credential'){await auth.createUserWithEmailAndPassword(otpEmail,pw);}else throw e;}
+  }catch(e){btn.disabled=false;btn.textContent='Verify & Sign In';setAuthMsg('authOtpMsg','Error: '+e.message,'error');}
+}
+function setAuthMsg(id,msg,type){const el=document.getElementById(id);el.textContent=msg;el.className='auth-msg'+(type?' '+type:'');}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const digits=document.querySelectorAll('.auth-otp-digit');
+  digits.forEach((digit,idx)=>{
+    digit.addEventListener('input',function(){
+      this.value=this.value.replace(/[^0-9]/g,'');
+      if(this.value&&idx<digits.length-1)digits[idx+1].focus();
+      if(idx===digits.length-1&&this.value){let ok=true;digits.forEach(d=>{if(!d.value)ok=false;});if(ok)verifyOTP();}
+    });
+    digit.addEventListener('keydown',function(e){if(e.key==='Backspace'&&!this.value&&idx>0)digits[idx-1].focus();});
+    digit.addEventListener('paste',function(e){e.preventDefault();const p=(e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'').slice(0,6);for(let i=0;i<p.length&&i<digits.length;i++)digits[i].value=p[i];if(p.length>=6)verifyOTP();});
+  });
+  document.getElementById('authEmail').addEventListener('keydown',e=>{if(e.key==='Enter')sendOTP();});
+});
+
+/* ══════════════════════════════════════════════════════
+   FIREBASE AUTH
+══════════════════════════════════════════════════════ */
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    currentUser=user;
+    const doc=await db.collection('users').doc(user.uid).get();
+    if(doc.exists&&doc.data().name){userProfile=doc.data();showMainApp();}
+    else{document.getElementById('authScreen').classList.add('hidden');document.getElementById('profilePopup').classList.add('open');}
+  }else{
+    currentUser=null;userProfile=null;
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('profilePopup').classList.remove('open');
+    document.getElementById('appContent').classList.remove('visible');
+  }
+});
+
+/* ══════════════════════════════════════════════════════
+   PROFILE
+══════════════════════════════════════════════════════ */
+async function saveProfile(){
+  const name=document.getElementById('profileName').value.trim();
+  if(!name){setAuthMsg('profileMsg','Name is required.','error');return;}
+  try{
+    const pd={name,surname:document.getElementById('profileSurname').value.trim()||'',instagram:document.getElementById('profileInstagram').value.trim()||'',email:currentUser.email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),usageCount:0,firstUsageTimestamp:null,usedCombos:[]};
+    await db.collection('users').doc(currentUser.uid).set(pd,{merge:true});
+    userProfile=pd;document.getElementById('profilePopup').classList.remove('open');
+    showMainApp();showToast('Welcome, '+name+'! ✦');
+  }catch(e){setAuthMsg('profileMsg','Error: '+e.message,'error');}
+}
+
+/* ══════════════════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════════════════ */
+async function showMainApp(){
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('profilePopup').classList.remove('open');
+  document.getElementById('appContent').classList.add('visible');
+  document.getElementById('userBar').classList.add('visible');
+  document.getElementById('ubAvatar').textContent=(userProfile.name||'U').charAt(0).toUpperCase();
+  document.getElementById('ubName').textContent=userProfile.name+(userProfile.surname?' '+userProfile.surname:'');
+  document.getElementById('ubEmail').textContent=currentUser.email;
+  document.getElementById('inputName').value=userProfile.name||'';
+  await refreshUsageData();
+  await loadCloudHistory();
+}
+
+/* ══════════════════════════════════════════════════════
+   USAGE TRACKING
+══════════════════════════════════════════════════════ */
+async function refreshUsageData(){
+  if(!currentUser)return;
+  const doc=await db.collection('users').doc(currentUser.uid).get();
+  if(!doc.exists)return;
+  const d=doc.data();userProfile=d;
+  let uc=d.usageCount||0;const ft=d.firstUsageTimestamp;
+  if(ft){
+    const fTime=ft.toDate?ft.toDate().getTime():ft;
+    if(Date.now()-fTime>=48*3600000){
+      await db.collection('users').doc(currentUser.uid).update({usageCount:0,firstUsageTimestamp:null,usedCombos:[]});
+      uc=0;userProfile.usageCount=0;userProfile.firstUsageTimestamp=null;userProfile.usedCombos=[];
+    }
+  }
+  const rem=Math.max(0,3-uc);
+  const ce=document.getElementById('ubCredits');ce.textContent=rem+' / 3 credits';ce.classList.toggle('exhausted',rem===0);
+  if(rem===0&&userProfile.firstUsageTimestamp)showCooldownBanner();
+  else{hideCooldownBanner();document.getElementById('generateBtn').disabled=false;}
+}
+function showCooldownBanner(){document.getElementById('cooldownBanner').classList.add('visible');document.getElementById('generateBtn').disabled=true;if(cooldownInterval)clearInterval(cooldownInterval);cooldownInterval=setInterval(updateCooldown,1000);updateCooldown();}
+function hideCooldownBanner(){document.getElementById('cooldownBanner').classList.remove('visible');if(cooldownInterval)clearInterval(cooldownInterval);}
+function updateCooldown(){
+  if(!userProfile||!userProfile.firstUsageTimestamp)return;
+  const ft=userProfile.firstUsageTimestamp.toDate?userProfile.firstUsageTimestamp.toDate().getTime():userProfile.firstUsageTimestamp;
+  const rem=ft+48*3600000-Date.now();
+  if(rem<=0){refreshUsageData();document.getElementById('generateBtn').disabled=false;return;}
+  const h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000),s=Math.floor((rem%60000)/1000);
+  document.getElementById('cooldownTimer').textContent=String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+async function consumeCredit(name,biz){
+  if(!currentUser)return false;
+  const ck=(name+'||'+biz).toLowerCase().trim();
+  const uc=userProfile.usedCombos||[];
+  if(uc.includes(ck))return true;
+  if((userProfile.usageCount||0)>=3){showToast('No credits remaining. Wait for cooldown.');return false;}
+  const upd={usageCount:firebase.firestore.FieldValue.increment(1),usedCombos:firebase.firestore.FieldValue.arrayUnion(ck)};
+  if(!userProfile.firstUsageTimestamp)upd.firstUsageTimestamp=firebase.firestore.FieldValue.serverTimestamp();
+  await db.collection('users').doc(currentUser.uid).update(upd);
+  userProfile.usageCount=(userProfile.usageCount||0)+1;
+  if(!userProfile.usedCombos)userProfile.usedCombos=[];
+  userProfile.usedCombos.push(ck);
+  await refreshUsageData();return true;
+}
+
+/* ══════════════════════════════════════════════════════
+   CLOUD HISTORY
+══════════════════════════════════════════════════════ */
+async function loadCloudHistory(){
+  if(!currentUser)return;
+  try{
+    const snap=await db.collection('users').doc(currentUser.uid).collection('history').orderBy('createdAt','desc').limit(12).get();
+    const h=[];snap.forEach(d=>h.push({id:d.id,...d.data()}));renderHistory(h);
+  }catch(e){renderHistory([]);}
+}
+async function saveToCloudHistory(brand,inputs){
+  if(!currentUser)return;
+  try{await db.collection('users').doc(currentUser.uid).collection('history').add({brandName:brand.brandName,biz:inputs.biz,colorPalette:brand.colorPalette||'',brand:JSON.parse(JSON.stringify(brand)),inputs:JSON.parse(JSON.stringify(inputs)),createdAt:firebase.firestore.FieldValue.serverTimestamp()});await loadCloudHistory();}catch(e){}
+}
+function renderHistory(history){
+  const s=document.getElementById('historySection'),g=document.getElementById('historyGrid');
+  if(!history||!history.length){s.style.display='none';return;}
+  s.style.display='block';
+  g.innerHTML=history.map(e=>{
+    const sw=parseSwatches(e.colorPalette||'').map(s=>`<div class="hc-swatch" style="background:${s.hex}"></div>`).join('');
+    const dt=e.createdAt&&e.createdAt.toDate?e.createdAt.toDate().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
+    return`<div class="history-card" onclick="restoreCloudBrand('${e.id}')"><div class="hc-name">${escHtml(e.brandName)}</div><div class="hc-biz">${escHtml(e.biz)}</div><div class="hc-swatches">${sw}</div><div class="hc-date">${escHtml(dt)}</div><div class="hc-restore">Restore ↗</div></div>`;
+  }).join('');
+}
+async function restoreCloudBrand(id){
+  if(!currentUser)return;
+  try{const d=await db.collection('users').doc(currentUser.uid).collection('history').doc(id).get();if(!d.exists)return;const data=d.data();lastBrandData=data.brand;lastInputs=data.inputs;renderOutput(data.brand);showToast('Restored: '+data.brandName);}catch(e){}
+}
+async function clearHistory(){
+  if(!currentUser||!confirm('Clear all history?'))return;
+  try{const snap=await db.collection('users').doc(currentUser.uid).collection('history').get();const b=db.batch();snap.forEach(d=>b.delete(d.ref));await b.commit();renderHistory([]);}catch(e){}
+}
+
+/* ══════════════════════════════════════════════════════
+   LOGOUT
+══════════════════════════════════════════════════════ */
+async function logoutUser(){
+  try{await auth.signOut();document.getElementById('output').style.display='none';document.getElementById('userBar').classList.remove('visible');document.getElementById('appContent').classList.remove('visible');hideCooldownBanner();
+  document.getElementById('authEmailStep').style.display='block';document.getElementById('authOtpStep').style.display='none';document.getElementById('authStep1').className='auth-step active';document.getElementById('authStep2').className='auth-step';document.querySelectorAll('.auth-otp-digit').forEach(d=>d.value='');showToast('Signed out.');}catch(e){}
+}
+
+/* ══════════════════════════════════════════════════════
+   UI HELPERS
+══════════════════════════════════════════════════════ */
+function toggleMJ(){mjMode=!mjMode;document.getElementById('mjToggle').classList.toggle('on',mjMode);document.getElementById('mjDesc').textContent=mjMode?'Midjourney format':'Gemini / Imagen (default)';}
+function setTheme(btn){document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');selectedTheme=btn.dataset.theme;document.getElementById('themeHint').classList.remove('visible');document.querySelectorAll('.theme-btn').forEach(b=>b.classList.remove('invalid-theme'));}
+function handleAudienceSelect(){const s=document.getElementById('audienceSelect'),i=document.getElementById('audienceCustom');if(s.value==='custom'){i.style.display='block';i.focus();}else if(s.value){i.style.display='block';i.placeholder='Add more details…';}else{i.style.display='none';i.value='';}}
+function getAudience(){const s=document.getElementById('audienceSelect'),c=document.getElementById('audienceCustom').value.trim();if(s.value==='custom')return c||'';if(s.value&&c)return s.value+' — '+c;return s.value||c||'';}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function setLoading(on){document.getElementById('generateBtn').disabled=on;document.getElementById('loadingBar').classList.toggle('visible',on);document.getElementById('loadingText').classList.toggle('visible',on);}
+function showError(msg){const el=document.getElementById('errorMsg');el.textContent=msg;el.classList.add('visible');setTimeout(()=>el.classList.remove('visible'),9000);}
+function updateLoadingMsg(msg){const el=document.getElementById('loadingText');if(el)el.textContent=msg;}
+
+function parseSwatches(cs){
+  const colors=[];const hm=cs.match(/#[0-9A-Fa-f]{3,6}/g);
+  if(hm&&hm.length){hm.forEach(h=>colors.push({hex:h,name:h}));return colors.slice(0,5);}
+  const named={black:'#1a1a1a',white:'#f5f5f0',cream:'#fdf8ee',gold:'#C9A84C',navy:'#1B2A4A',emerald:'#1a6b45',rust:'#b34a2e',blush:'#f4b8c1',teal:'#1a6b6b',sage:'#6B8F71',burgundy:'#722F37',coral:'#FF6B6B',lavender:'#9d8cc0',amber:'#FFBF00'};
+  const lo=cs.toLowerCase();Object.keys(named).forEach(k=>{if(lo.includes(k))colors.push({hex:named[k],name:k.charAt(0).toUpperCase()+k.slice(1)});});
+  if(!colors.length)['#C9A84C','#09090E','#E4E4EF','#6A6A8A'].forEach(h=>colors.push({hex:h,name:h}));
+  return colors.slice(0,5);
+}
+function buildSwatchesHtml(cs){const sw=parseSwatches(cs);let h='<div class="palette-swatches">';sw.forEach(s=>{h+=`<div class="swatch" style="background:${s.hex}" onclick="copySwatchColor('${s.hex}')"><div class="swatch-tooltip">${escHtml(s.name)}</div></div>`;});h+='</div><div class="palette-text">Click swatch to copy hex</div>';return h;}
+function copySwatchColor(hex){copyText(hex,()=>showToast('Copied: '+hex));}
+
+/* ══════════════════════════════════════════════════════
+   VALIDATE & GENERATE
+══════════════════════════════════════════════════════ */
+function validate(){
+  const n=document.getElementById('inputName').value.trim(),b=document.getElementById('inputBiz').value.trim();let ok=true;
+  document.getElementById('inputName').classList.toggle('invalid',!n);
+  document.getElementById('inputBiz').classList.toggle('invalid',!b);
+  if(!selectedTheme){document.getElementById('themeHint').classList.add('visible');document.querySelectorAll('.theme-btn').forEach(b=>b.classList.add('invalid-theme'));ok=false;}
+  if(!n||!b){showError('Please fill in Your Name and Business / Niche.');ok=false;}
+  return ok;
+}
+function collectInputs(){return{name:document.getElementById('inputName').value.trim(),biz:document.getElementById('inputBiz').value.trim(),audience:getAudience(),vibe:document.getElementById('inputVibe').value,theme:selectedTheme};}
+
+async function generate(){
+  if(!currentUser){showToast('Please sign in first.');return;}
+  if(!validate())return;
+  const inp=collectInputs();
+  const canProceed=await consumeCredit(inp.name,inp.biz);
+  if(!canProceed)return;
+  lastInputs=inp;usedBrandNames=[];
+  document.getElementById('errorMsg').classList.remove('visible');
+  setLoading(true);
+  updateLoadingMsg('Inventing your brand name…');
+
+  try {
+    const brand=await generateBrand(inp,[]);
+    setLoading(false);
+    lastBrandData=brand;usedBrandNames.push(brand.brandName);
+    renderOutput(brand);
+    await saveToCloudHistory(brand,inp);
+    if(brand.usedAPI)showToast('✦ Pinterest-quality prompts generated with Claude AI!');
+    else showToast('✦ Brand identity generated!');
+  } catch(err) {
+    setLoading(false);
+    showError('Generation failed. Please try again.');
+    console.error(err);
+  }
+}
+
+async function regenAll(){
+  if(!lastInputs.biz){showToast('Generate first!');return;}
+  const btn=document.getElementById('regenBtn');btn.disabled=true;btn.classList.add('loading');
+  setLoading(true);
+  updateLoadingMsg('Generating new variation…');
+  try{
+    const brand=await generateBrand(lastInputs,usedBrandNames);
+    btn.disabled=false;btn.classList.remove('loading');
+    setLoading(false);
+    lastBrandData=brand;usedBrandNames.push(brand.brandName);
+    renderOutput(brand);
+    await saveToCloudHistory(brand,lastInputs);
+    showToast('✦ New brand #'+usedBrandNames.length+' generated!');
+    document.getElementById('output').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(err){btn.disabled=false;btn.classList.remove('loading');setLoading(false);showError('Regeneration failed.');}
+}
+
+/* ══════════════════════════════════════════════════════
+   RENDER OUTPUT
+══════════════════════════════════════════════════════ */
+const promptModels=['Imagen 3','Imagen 3','Gemini 2.0 Flash','Imagen 3','Gemini 2.0 Flash','Imagen 3','Imagen 3','Imagen 3'];
+const promptModelsMJ=['Midjourney v6','Midjourney v6','Midjourney v6','Midjourney v6','Midjourney v6','Midjourney v6','Midjourney v6','Midjourney v6'];
+
+function renderOutput(brand){
+  const tags=(brand.hashtags||[]).map(h=>`<span class="hashtag">${escHtml(h)}</span>`).join('');
+  document.getElementById('brandHero').innerHTML=
+    `<div class="bh-top"><span class="bh-label">✦ Brand Identity</span><span class="bh-cat">${escHtml(brand.category||'')}</span></div>`+
+    `<div class="bh-name-row"><span class="bh-name-label">Brand Name</span><span class="bh-name-value">${escHtml(brand.brandName||'')}</span></div>`+
+    (brand.hindiTagline?`<div class="bh-tagline">❝ ${escHtml(brand.hindiTagline)} ❞</div>`:'')+
+    `<div class="bh-meaning">${escHtml(brand.meaning||'')}</div>`+
+    `<div class="bh-grid">`+
+    `<div class="bh-cell"><div class="bh-cell-label">Personality</div><div class="bh-cell-value">${escHtml(brand.personality||'')}</div></div>`+
+    `<div class="bh-cell"><div class="bh-cell-label">Tone</div><div class="bh-cell-value">${escHtml(brand.tone||'')}</div></div>`+
+    `<div class="bh-cell"><div class="bh-cell-label">Target Audience</div><div class="bh-cell-value">${escHtml(brand.audience||'')}</div></div>`+
+    `<div class="bh-cell"><div class="bh-cell-label">Color Palette</div><div class="bh-cell-value">${escHtml(brand.colorPalette||'')}</div>${buildSwatchesHtml(brand.colorPalette||'')}</div>`+
+    `<div class="bh-cell bh-cell-wide"><div class="bh-cell-label">Typography Direction</div><div class="bh-cell-value">${escHtml(brand.typography||'')}</div></div>`+
+    `</div>`+
+    `<div class="bh-hashtags"><span class="bh-ht-label">Tags</span>${tags}</div>`;
+
+  const pib = document.getElementById('pinterestInsightBox');
+  if(brand.usedAPI){
+    pib.innerHTML=`<div class="pinterest-insight"><span class="pi-icon">📌</span><div><div class="pi-label">Claude AI × Pinterest Intelligence</div><div class="pi-text">Your prompts were crafted by Claude AI with Pinterest trend data — designed to produce visuals that match the most-saved brand content on Pinterest.</div></div></div>`;
+  } else if(brand.nicheData){
+    pib.innerHTML=`<div class="pinterest-insight"><span class="pi-icon">📊</span><div><div class="pi-label">Business Dataset Insights</div><div class="pi-text">Your color palette and scene ideas are informed by our dataset of 50,000+ businesses. Popular colors for this niche: <strong>${brand.nicheData.c.slice(0,3).join(', ')}</strong>.</div></div></div>`;
+  } else { pib.innerHTML=''; }
+
+  const pc=document.getElementById('promptsContainer');pc.innerHTML='';
+  (brand.prompts||[]).forEach((p,i)=>{
+    const div=document.createElement('div');div.className='prompt-card';
+    const model=(mjMode?promptModelsMJ:promptModels)[i]||'Imagen 3';
+    const apiLabel=brand.usedAPI?`<span class="meta-badge meta-pinterest">📌 Pinterest AI</span>`:'';
+    div.innerHTML=`<div class="prompt-header"><div class="prompt-num">${i+1}</div><div class="prompt-title-text">${escHtml(p.title)}</div><div class="prompt-actions"><button class="action-btn" id="copybtn-${i}" onclick="copyPrompt(${i})">Copy</button><button class="action-btn run" onclick="runSinglePrompt(${i})">▶ Run in Gemini</button></div></div><div class="prompt-text" id="prompt-text-${i}">${escHtml(p.prompt)}</div><div class="prompt-meta"><span class="meta-badge meta-ratio">${escHtml(p.ratio||'1:1')}</span><span class="meta-badge meta-model">${escHtml(model)}</span>${apiLabel}</div>`;
+    pc.appendChild(div);
+  });
+  document.getElementById('output').style.display='block';
+  document.getElementById('output').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ══════════════════════════════════════════════════════
+   COPY / RUN
+══════════════════════════════════════════════════════ */
+function copyPrompt(i){
+  const p=lastBrandData&&lastBrandData.prompts[i];if(!p)return;
+  copyText(p.prompt+(mjMode?getMJSuffix(p.ratio):''),()=>{
+    const b=document.getElementById('copybtn-'+i);if(b){b.textContent='Copied!';b.classList.add('copied');setTimeout(()=>{b.textContent='Copy';b.classList.remove('copied');},2400);}
+    showToast('Prompt copied!');
+  });
+}
+function runSinglePrompt(i){
+  const p=lastBrandData&&lastBrandData.prompts[i];if(!p)return;
+  const bn=lastBrandData.brandName||'the brand';
+  const lp=lastBrandData.prompts[0]?lastBrandData.prompts[0].prompt:'';
+  const ld=i!==0&&lp?'LOGO TO RECREATE:\n'+lp.substring(0,280)+'…\n\n':'';
+  const prefix=i===0?`IMPORTANT:\n✅ ONE single logo image. No collage.\n✅ White/transparent background.\n✅ "${bn}" spelled perfectly.\n✅ 4K.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`:`IMPORTANT:\n${ld}✅ ONE single full-res image. No collage.\n✅ "${bn}" spelled correctly.\n✅ Ultra-realistic, 4K. Pinterest-quality.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nIMAGE ${i+1} OF 8: ${p.title.toUpperCase()}\n\n`;
+  copyText(prefix+p.prompt+(mjMode?getMJSuffix(p.ratio):''),()=>{window.open('https://gemini.google.com/','_blank');showToast('Prompt '+(i+1)+' copied! Paste in Gemini.');});
+}
+
+/* ══════════════════════════════════════════════════════
+   STEP MODE
+══════════════════════════════════════════════════════ */
+function startStepMode(){if(!lastBrandData||!lastBrandData.prompts){showToast('Generate first!');return;}stepQueue=lastBrandData.prompts.slice(1);stepIndex=0;buildPips();renderStep();document.getElementById('modalContent').style.display='';document.getElementById('modalDone').classList.remove('visible');document.getElementById('stepModal').classList.add('open');}
+function buildPips(){const t=document.getElementById('progressTrack');t.innerHTML='';for(let i=0;i<stepQueue.length;i++){const p=document.createElement('div');p.className='pip';p.id='pip-'+i;t.appendChild(p);}updatePips();}
+function updatePips(){for(let i=0;i<stepQueue.length;i++){const p=document.getElementById('pip-'+i);if(p)p.className='pip'+(i<stepIndex?' done':i===stepIndex?' active':'');}}
+function renderStep(){const p=stepQueue[stepIndex];document.getElementById('stepLabel').textContent='STEP '+(stepIndex+1)+' OF '+stepQueue.length;document.getElementById('stepTitle').textContent=p.title;document.getElementById('stepInstruction').innerHTML='<strong>1.</strong> Click below — prompt copied + Gemini opens.<br><strong>2.</strong> Upload your logo → paste prompt → generate.<br><strong>3.</strong> Come back and click Next.';document.getElementById('stepPreview').textContent=p.prompt.substring(0,180)+'…';document.getElementById('stepCounter').textContent=(stepIndex+1)+' of '+stepQueue.length;updatePips();}
+function stepGo(){const p=stepQueue[stepIndex];if(!p)return;const bn=lastBrandData.brandName;const lp=lastBrandData.prompts[0]?lastBrandData.prompts[0].prompt:'';const ld=lp?'LOGO TO RECREATE:\n'+lp.substring(0,280)+'…\n\n':'';const prefix=`IMPORTANT:\n${ld}✅ ONE single full-res image. No collage.\n✅ "${bn}" spelled correctly.\n✅ Ultra-realistic, 4K. Pinterest-quality.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nIMAGE ${stepIndex+1} OF ${stepQueue.length}: ${p.title.toUpperCase()}\n\n`;copyText(prefix+p.prompt+(mjMode?getMJSuffix(p.ratio):''),()=>{window.open('https://gemini.google.com/','_blank');showToast('Image '+(stepIndex+1)+' copied!');advanceStep();});}
+function stepSkip(){advanceStep();}
+function advanceStep(){const p=document.getElementById('pip-'+stepIndex);if(p)p.className='pip done';stepIndex++;if(stepIndex>=stepQueue.length){for(let i=0;i<stepQueue.length;i++){const pp=document.getElementById('pip-'+i);if(pp)pp.className='pip done';}document.getElementById('modalContent').style.display='none';document.getElementById('modalDone').classList.add('visible');}else renderStep();}
+function closeModal(){document.getElementById('stepModal').classList.remove('open');}
+
+/* ══════════════════════════════════════════════════════
+   COLLAGE & BRAND SHEET
+══════════════════════════════════════════════════════ */
+function runAllCollage(){
+  if(!lastBrandData)return;const ps=lastBrandData.prompts;const bn=lastBrandData.brandName;
+  const combined=`⚠️ UPLOAD YOUR LOGO FIRST, THEN PASTE THIS.\n\nTASK: Create a 7-panel Pinterest-quality collage for "${bn}" using my uploaded logo.\n\n`+ps.slice(1).map((p,i)=>`PANEL ${i+1} — ${p.title.toUpperCase()}:\n${p.prompt}`).join('\n\n────────────\n\n')+`\n\n"${bn}" spelled perfectly everywhere. Pinterest-aesthetic. 4K output.`;
+  copyText(combined,()=>{window.open('https://gemini.google.com/','_blank');showToast('Collage prompt copied!');});
+}
+
+function copyBrandSheet(){
+  if(!lastBrandData){showToast('Generate first!');return;}
+  const b=lastBrandData;
+  const inp=lastInputs;
+  const bn=b.brandName;
+
+  const swatches = parseSwatches(b.colorPalette || '');
+  const hexList = swatches.map(s => s.hex).join(', ');
+  const primaryHex = swatches[0] ? swatches[0].hex : '#0A0A0F';
+  const accentHex = swatches[1] ? swatches[1].hex : '#C9A84C';
+  const secondaryHex = swatches[2] ? swatches[2].hex : '#F5F5F0';
+  const theme = inp.theme || 'Dark Luxury';
+  const vibe = inp.vibe || 'Luxury & Premium';
+  const biz = inp.biz || 'premium brand';
+  const ownerName = inp.name || '';
+  const nicheCtx = getNicheColorContext(biz);
+  const tagline = b.hindiTagline || '';
+
+  const lines=[
+    `You are a world-class brand identity designer. I need you to generate 8 separate brand images for "${bn}" — a ${biz} brand.`,
+    ``,
+    `⚠️ CRITICAL INSTRUCTION: You MUST generate ALL 8 images below, one after another. Do NOT stop after the first image. After each image is generated, immediately proceed to the next one. Generate image 1, then 2, then 3, and so on until all 8 are complete.`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `📌 BRAND IDENTITY REFERENCE (use this for ALL images):`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `Brand Name: ${bn}`,
+    `Business: ${biz}`,
+    `Category: ${b.category}`,
+    `Hindi Tagline: ${tagline}`,
+    `Owner Name: ${ownerName}`,
+    `Visual Theme: ${theme}`,
+    `Brand Vibe: ${vibe}`,
+    `Personality: ${b.personality}`,
+    `Tone: ${b.tone}`,
+    `Target Audience: ${b.audience}`,
+    ``,
+    `🎨 EXACT COLOR PALETTE (apply to EVERY image):`,
+    `  Primary: ${primaryHex}`,
+    `  Accent: ${accentHex}`,
+    `  Secondary: ${secondaryHex}`,
+    `  Full palette: ${hexList}`,
+    `  Description: ${b.colorPalette}`,
+    ``,
+    `🎨 PINTEREST NICHE COLORS FOR ${biz.toUpperCase()} (blend with palette above):`,
+    `  Dark base: ${nicheCtx.bg1}`,
+    `  Mid tone: ${nicheCtx.bg2}`,
+    `  Niche accent: ${nicheCtx.accent}`,
+    `  Highlight: ${nicheCtx.hi}`,
+    `  Proven surface: ${nicheCtx.surface}`,
+    `  Lighting mood: ${nicheCtx.mood}`,
+    ``,
+    `Typography: ${b.typography}`,
+    `Hashtags: ${(b.hashtags||[]).join(' ')}`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `📌 PINTEREST VISUAL STANDARD (apply to ALL images):`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    ``,
+    `Every image must look like the most-saved content on Pinterest for ${biz}:`,
+    `• Editorial, aspirational, premium — never generic or stock-photo-like`,
+    `• Rich textures: ${nicheCtx.surface}, marble, leather, brushed metal`,
+    `• Lighting: ${nicheCtx.mood}`,
+    `• Perfect composition: rule of thirds, leading lines, generous negative space`,
+    `• Consistent color grading across ALL 8 images using the exact palette above`,
+    `• Photorealistic rendering — 4K, ultra-sharp, no artifacts`,
+    `• Each image is a SINGLE standalone image — NO collages, NO grids, NO split-screens`,
+    `• Brand name "${bn}" spelled PERFECTLY in every image containing text`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `🖼️ GENERATE THESE 8 IMAGES IN ORDER:`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+  ];
+
+  (b.prompts||[]).forEach((p,i)=>{
+    lines.push('');
+    lines.push(`▸ IMAGE ${i+1} OF 8 — ${p.title.toUpperCase()} [${p.ratio||'1:1'}]`);
+    lines.push(`Generate this image now:`);
+    lines.push('');
+
+    const imgNum = i + 1;
+    let enhanced = p.prompt;
+
+    if(imgNum === 1) {
+      enhanced = `Create a single, clean, award-winning brand logo for "${bn}" — a ${biz} business. The logomark must include both a symbol/icon relevant to ${biz} AND the brand name "${bn}" as a wordmark. Subtly embed the letter "${ownerName.charAt(0).toUpperCase()}" in the symbol as a hidden design detail — use negative space, curves, or structural lines (e.g. for ${biz}: shape the icon so the letter appears naturally inside it). The icon must read as a ${biz} symbol FIRST — the hidden letter is a subtle genius detail. Icon color: ${accentHex}. Wordmark: "${bn}" in ${b.typography}. Background: pure white. 4K vector-crisp. Spell "${bn}" PERFECTLY. Single image only, no collage.`;
+    } else if(imgNum === 2) {
+      enhanced = `Photorealistic photograph of luxury business cards for "${bn}" — a ${biz} brand. Two cards (front and back) arranged at a 35° overhead angle on ${nicheCtx.surface}. Front card: matte ${primaryHex} 600gsm stock, "${bn}" logo in ${accentHex} foil stamp at top-left, owner name "${ownerName}" in elegant serif type. Back: solid ${accentHex} background, large white logo centered, spot UV gloss visible. Real card thickness, foil catching studio light. Lighting: ${nicheCtx.mood}. Shallow depth of field, luxury print studio aesthetic. 4K. Single image only.`;
+    } else if(imgNum === 3) {
+      enhanced = `Full realistic browser window screenshot of "${bn}" website homepage — a ${biz} brand. NOT a wireframe. Fully designed, live-looking website. Hero: full-width lifestyle image (${nicheCtx.scene}), large editorial headline in ${primaryHex}, CTA button in ${accentHex}. Navigation: clean bar with brand logo. Below fold: 3-column features, testimonials. Color system: ${b.colorPalette}. Displayed on MacBook Pro 16-inch at 15° angle, studio desk. Awwwards-quality design. 4K. Spell "${bn}" perfectly. Single image.`;
+    } else if(imgNum === 4) {
+      enhanced = `Ultra-realistic 3D render of iPhone 15 Pro in space black, at 10° angle. Screen shows fully designed "${bn}" app for ${biz}. UI: "Welcome to ${bn}" header, brand logo in nav, hero content card (${nicheCtx.scene}), bottom tab bar, floating action button in ${accentHex}. Colors: ${primaryHex} background, ${accentHex} accents, ${secondaryHex} cards, 16px rounded corners. Clean drop shadow on ${theme}-inspired gradient. Dribbble-quality. 4K. Single image.`;
+    } else if(imgNum === 5) {
+      enhanced = `Photorealistic photograph of large outdoor billboard for "${bn}" — a ${biz} brand — on urban road. Billboard: lifestyle hero image (${nicheCtx.scene}) on left two-thirds, solid ${primaryHex} panel right, bold white headline max 5 words, "${bn}" logo bottom-right, website URL bottom-left. Environment: ${nicheCtx.mood}, blurred city, real steel structure. Cinematic 35mm quality, slight natural grain. Must look like a real photograph. 4K. Single image.`;
+    } else if(imgNum === 6) {
+      enhanced = `Overhead flat-lay of "${bn}" complete brand stationery on ${nicheCtx.surface}. Items: A4 letterhead with logo, branded envelope with ${accentHex} wax seal, two business cards (front/back), A5 hardcover notebook with embossed logo, premium metal pen with ${accentHex} barrel, tissue paper with subtle "${bn}" pattern, small gift tag. All in color system: ${hexList}. Lighting: ${nicheCtx.mood}, soft natural window from upper-left. Sony A7R IV, 50mm, f/4 aesthetic. Pinterest flat-lay. 4K. Single image.`;
+    } else if(imgNum === 7) {
+      enhanced = `1080×1080 Instagram feed post for "${bn}" — a ${biz} brand. Aspirational editorial lifestyle scene: ${nicheCtx.scene}. Real-world setting, curated. Brand logo subtle watermark bottom-right. Bold headline max 4 words in ${b.typography}. Color grading: ${b.colorPalette} with ${nicheCtx.mood}. Rule of thirds. The kind of post that gets thousands of saves. 4K. Single image.`;
+    } else if(imgNum === 8) {
+      enhanced = `Cinematic A2 portrait poster (2:3) for "${bn}" — gallery exhibition quality. Atmospheric lifestyle environment: ${nicheCtx.scene}. Rich cinematic color grade: ${b.colorPalette} with ${nicheCtx.mood}. Typography: large editorial brand name "${bn}" at bottom third, small italic Hindi tagline "${tagline}" just above, minimalist logo mark at very top with breathing room. Lighting: dramatic, cinematic, moody — evoking ${b.personality}. Vogue / Kinfolk / Cereal magazine quality. 4K print-ready. Spell "${bn}" PERFECTLY. Single image.`;
+    }
+
+    lines.push(enhanced);
+
+    if(i < (b.prompts||[]).length - 1) {
+      lines.push('');
+      lines.push(`✅ Image ${imgNum} of 8 complete. Now immediately generate Image ${imgNum+1} below. Do not stop.`);
+    }
+  });
+
+  lines.push('');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push(`⚠️ FINAL REMINDER:`);
+  lines.push(`• You MUST generate ALL 8 images. Do NOT stop after Image 1.`);
+  lines.push(`• Each image is SEPARATE — one image per generation, no collages.`);
+  lines.push(`• "${bn}" must be spelled PERFECTLY in every image with text.`);
+  lines.push(`• Use the EXACT color palette: ${hexList}`);
+  lines.push(`• Blend with niche Pinterest colors: ${nicheCtx.bg1}, ${nicheCtx.accent}`);
+  lines.push(`• Every image must be 4K, photorealistic, Pinterest-quality.`);
+  lines.push(`• After each image, say "Image X of 8 complete" then immediately generate the next.`);
+  lines.push('');
+  lines.push('Generated by BrandedByShiv — AI Brand Identity Engine ✦');
+
+  copyText(lines.join('\n'),()=>showToast('✦ Full brand sheet copied! Paste into Gemini.'));
+}
+
+function getMJSuffix(r){return'\n\n--ar '+(r||'1:1').replace(':','')+'  --v 6.1 --style raw --q 2';}
+
+/* ══════════════════════════════════════════════════════
+   CLIPBOARD
+══════════════════════════════════════════════════════ */
+function copyText(text,cb){if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(cb).catch(()=>fallbackCopy(text,cb));}else fallbackCopy(text,cb);}
+function fallbackCopy(text,cb){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px;top:-9999px';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');if(cb)cb();}catch(e){showToast('Copy failed.');}document.body.removeChild(ta);}
+</script>
+</body>
+</html>
