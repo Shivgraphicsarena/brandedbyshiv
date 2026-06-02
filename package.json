@@ -1,0 +1,16 @@
+{
+  "name": "brandedbyshiv",
+  "version": "1.0.0",
+  "description": "AI Branding Studio for Indian Businesses",
+  "private": true,
+  "engines": {
+    "node": "18.x"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
