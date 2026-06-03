@@ -7,10 +7,6 @@
 <meta name="description" content="Generate premium brand identities for Indian small businesses using AI.">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#7B0D1E">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -24,41 +20,6 @@
 html{scroll-behavior:smooth;}
 body{background:var(--white);color:var(--text);font-family:var(--ff-body);overflow-x:hidden;}
 
-/* ── AUTH SCREEN ── */
-.auth-screen{position:fixed;inset:0;background:var(--white);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;}
-.auth-screen.hidden{display:none;}
-.auth-box{width:100%;max-width:420px;border:2px solid var(--maroon);padding:40px 36px;}
-.auth-logo{font-family:var(--ff-display);font-size:28px;letter-spacing:2px;color:var(--maroon);margin-bottom:4px;}
-.auth-logo span{color:var(--pink);}
-.auth-tagline{font-size:13px;color:var(--text2);margin-bottom:32px;font-weight:300;}
-.auth-steps{display:flex;gap:8px;margin-bottom:28px;}
-.auth-step{flex:1;height:3px;background:var(--grey2);border-radius:1px;transition:background 0.3s;}
-.auth-step.active{background:var(--pink);}
-.auth-step.done{background:var(--maroon);}
-.auth-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin-bottom:12px;}
-.auth-input{width:100%;background:transparent;border:1px solid var(--grey2);border-bottom:2px solid var(--maroon);padding:12px 0;font-family:var(--ff-body);font-size:15px;color:var(--text);outline:none;margin-bottom:16px;transition:border-color 0.2s;}
-.auth-input:focus{border-bottom-color:var(--pink);}
-.auth-input::placeholder{color:var(--text3);}
-.auth-btn{width:100%;padding:14px;background:var(--maroon);color:#fff;border:none;font-family:var(--ff-display);font-size:18px;letter-spacing:2px;cursor:pointer;transition:background 0.2s;margin-bottom:10px;}
-.auth-btn:hover{background:var(--maroon2);}
-.auth-btn:disabled{opacity:0.5;cursor:not-allowed;}
-.auth-link{font-size:12px;color:var(--text2);cursor:pointer;text-decoration:underline;display:inline-block;margin-top:6px;}
-.auth-link:hover{color:var(--maroon);}
-.otp-row{display:flex;gap:8px;margin-bottom:16px;}
-.auth-otp-digit{flex:1;height:52px;text-align:center;font-size:22px;font-weight:600;border:1px solid var(--grey2);border-bottom:2px solid var(--maroon);background:transparent;color:var(--text);outline:none;transition:border-color 0.2s;}
-.auth-otp-digit:focus{border-bottom-color:var(--pink);}
-.auth-msg{font-size:12px;margin-top:8px;min-height:18px;}
-.auth-msg.error{color:var(--pink);}
-.auth-msg.success{color:var(--maroon);}
-#authOtpStep,#authProfileStep{display:none;}
-
-/* ── PROFILE POPUP ── */
-.profile-popup{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.3s;}
-.profile-popup.open{opacity:1;pointer-events:all;}
-.profile-box{background:var(--white);border:2px solid var(--maroon);padding:40px 36px;width:100%;max-width:400px;}
-.profile-title{font-family:var(--ff-display);font-size:26px;letter-spacing:2px;color:var(--maroon);margin-bottom:4px;}
-.profile-sub{font-size:13px;color:var(--text2);margin-bottom:28px;font-weight:300;}
-
 /* ── TOAST ── */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:#fff;font-size:13px;padding:10px 20px;z-index:500;opacity:0;transition:all 0.3s;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -69,8 +30,8 @@ body{background:var(--white);color:var(--text);font-family:var(--ff-body);overfl
 .cooldown-timer{font-family:var(--ff-display);font-size:20px;letter-spacing:3px;color:var(--maroon);}
 
 /* ── USER BAR ── */
-.user-bar{background:var(--black);border-bottom:2px solid var(--maroon);padding:0 40px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px;opacity:0;pointer-events:none;transition:opacity 0.3s;}
-.user-bar.visible{opacity:1;pointer-events:all;}
+.user-bar{background:var(--black);border-bottom:2px solid var(--maroon);padding:0 40px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+
 .ub-left{display:flex;align-items:center;gap:12px;}
 .ub-logo{font-family:var(--ff-display);font-size:20px;letter-spacing:2px;color:#fff;}
 .ub-logo span{color:var(--pink);}
@@ -84,8 +45,8 @@ body{background:var(--white);color:var(--text);font-family:var(--ff-body);overfl
 .ub-logout:hover{color:#fff;}
 
 /* ── APP CONTENT ── */
-#appContent{opacity:0;pointer-events:none;transition:opacity 0.3s;}
-#appContent.visible{opacity:1;pointer-events:all;}
+#appContent{opacity:1;pointer-events:all;}
+
 
 /* ── NAV TABS ── */
 .nav-tabs{background:var(--white);border-bottom:2px solid var(--maroon);padding:0 40px;display:flex;gap:0;overflow-x:auto;scrollbar-width:none;}
@@ -286,15 +247,7 @@ body{background:var(--white);color:var(--text);font-family:var(--ff-body);overfl
 </head>
 <body>
 
-<!-- AUTH -->
-<div class="auth-screen" id="authScreen">
-  <div class="auth-box">
-    <div class="auth-logo">BRANDED<span>BYSHIV</span></div>
-    <div class="auth-tagline">AI Brand Identity Engine — Sign in to get started</div>
-    <div class="auth-steps">
-      <div class="auth-step active" id="authStep1"></div>
-      <div class="auth-step" id="authStep2"></div>
-    </div>
+
 
     <!-- Email Step -->
     <div id="authEmailStep">
@@ -325,17 +278,7 @@ body{background:var(--white);color:var(--text);font-family:var(--ff-body);overfl
   </div>
 </div>
 
-<!-- PROFILE POPUP -->
-<div class="profile-popup" id="profilePopup">
-  <div class="profile-box">
-    <div class="profile-title">ONE LAST THING</div>
-    <div class="profile-sub">Tell us your name so we can personalize your experience.</div>
-    <div class="field"><label>First Name <span class="req-star">*</span></label><input type="text" id="profileName" class="auth-input" placeholder="Your first name"></div>
-    <div class="field"><label>Last Name <span class="opt-tag">OPTIONAL</span></label><input type="text" id="profileSurname" class="auth-input" placeholder="Last name"></div>
-    <div class="field"><label>Instagram <span class="opt-tag">OPTIONAL</span></label><input type="text" id="profileInstagram" class="auth-input" placeholder="@yourhandle"></div>
-    <button class="auth-btn" onclick="saveProfile()">START BUILDING →</button>
-    <div class="auth-msg" id="profileMsg"></div>
-  </div>
+
 </div>
 
 <!-- STEP MODAL -->
@@ -778,21 +721,6 @@ function showToolError(prefix, msg) {
 </script>
 <script>
 /* ══════════════════════════════════════════════════════
-   FIREBASE CONFIG
-══════════════════════════════════════════════════════ */
-const firebaseConfig = {
- apiKey: "AIzaSyBRfiqc8-am_NQI3BoudXYuQE2bPLD97i8",
-  authDomain: "brandingbyshiv-d0577.firebaseapp.com",
-  projectId: "brandingbyshiv-d0577",
-  storageBucket: "brandingbyshiv-d0577.firebasestorage.app",
-  messagingSenderId: "26979057059",
-  appId: "1:26979057059:web:45d6a79cd2b9ce9c01ae16"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-/* ══════════════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════════════ */
 let currentUser=null,userProfile=null,selectedTheme='',mjMode=false;
@@ -905,7 +833,7 @@ function generateBrandName(firstName, biz, excludeNames) {
     'Fino','Grit','Halo','Inka','Juno','Kaya','Livo','Mika','Novo','Orbi',
     'Pura','Qvik','Reva','Savi','Tiko','Urbo','Vika','Wizo','Xeno','Yolo',
     'Zumo','Aero','Bolt','Crux','Dash','Elvo','Flux','Hyve','Izio','Jolt',
-    'Kyro','Lynk','Mint','Niva','Onyx' 
+    'Kyro','Lynk','Mint','Niva','Onyx'
   ];
 
   const prefPool = prefixWords[niche] || prefixWords['default'];
@@ -1281,18 +1209,15 @@ document.addEventListener('DOMContentLoaded',()=>{
 /* ══════════════════════════════════════════════════════
    FIREBASE AUTH
 ══════════════════════════════════════════════════════ */
-auth.onAuthStateChanged(async user=>{
-  if(user){
-    currentUser=user;
-    const doc=await db.collection('users').doc(user.uid).get();
-    if(doc.exists&&doc.data().name){userProfile=doc.data();showMainApp();}
-    else{document.getElementById('authScreen').classList.add('hidden');document.getElementById('profilePopup').classList.add('open');}
-  }else{
-    currentUser=null;userProfile=null;
-    document.getElementById('authScreen').classList.remove('hidden');
-    document.getElementById('profilePopup').classList.remove('open');
-    document.getElementById('appContent').classList.remove('visible');
-  }
+// Auth removed - direct app access
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('appContent').classList.add('visible');
+  const ub = document.getElementById('userBar');
+  if(ub) ub.classList.add('visible');
+  document.getElementById('ubName').textContent = 'Guest User';
+  document.getElementById('ubEmail').textContent = 'No login required';
+  document.getElementById('ubAvatar').textContent = 'G';
+  document.getElementById('ubCredits').textContent = 'Unlimited';
 });
 
 /* ══════════════════════════════════════════════════════
@@ -1321,7 +1246,7 @@ async function showMainApp(){
   document.getElementById('ubName').textContent=userProfile.name+(userProfile.surname?' '+userProfile.surname:'');
   document.getElementById('ubEmail').textContent=currentUser.email;
   document.getElementById('inputName').value=userProfile.name||'';
-  await refreshUsageData();
+  // Usage tracking disabled
   await loadCloudHistory();
 }
 
@@ -1346,7 +1271,7 @@ async function refreshUsageData(){
   if(rem===0&&userProfile.firstUsageTimestamp)showCooldownBanner();
   else{hideCooldownBanner();document.getElementById('generateBtn').disabled=false;}
 }
-function showCooldownBanner(){document.getElementById('cooldownBanner').classList.add('visible');document.getElementById('generateBtn').disabled=true;if(cooldownInterval)clearInterval(cooldownInterval);cooldownInterval=setInterval(updateCooldown,1000);updateCooldown();}
+function showCooldownBanner(){}
 function hideCooldownBanner(){document.getElementById('cooldownBanner').classList.remove('visible');if(cooldownInterval)clearInterval(cooldownInterval);}
 function updateCooldown(){
   if(!userProfile||!userProfile.firstUsageTimestamp)return;
@@ -1368,7 +1293,7 @@ async function consumeCredit(name,biz){
   userProfile.usageCount=(userProfile.usageCount||0)+1;
   if(!userProfile.usedCombos)userProfile.usedCombos=[];
   userProfile.usedCombos.push(ck);
-  await refreshUsageData();return true;
+  // Usage tracking disabledreturn true;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1450,11 +1375,10 @@ function validate(){
 function collectInputs(){return{name:document.getElementById('inputName').value.trim(),biz:sanitizeInput(document.getElementById('inputBiz').value),audience:getAudience(),vibe:document.getElementById('inputVibe').value,theme:selectedTheme};}
 
 async function generate(){
-  if(!currentUser){showToast('Please sign in first.');return;}
+  
   if(!validate())return;
   const inp=collectInputs();
-  const canProceed=await consumeCredit(inp.name,inp.biz);
-  if(!canProceed)return;
+  // Auth removed - all generations allowed
   lastInputs=inp;usedBrandNames=[];
   document.getElementById('errorMsg').classList.remove('visible');
   setLoading(true);
@@ -1465,7 +1389,7 @@ async function generate(){
     setLoading(false);
     lastBrandData=brand;usedBrandNames.push(brand.brandName);
     renderOutput(brand);
-    await saveToCloudHistory(brand,inp);
+    // History disabled (auth removed)
     if(brand.usedAPI)showToast('✦ Pinterest-quality prompts generated with Claude AI!');
     else showToast('✦ Brand identity generated!');
   } catch(err) {
@@ -1486,7 +1410,7 @@ async function regenAll(){
     setLoading(false);
     lastBrandData=brand;usedBrandNames.push(brand.brandName);
     renderOutput(brand);
-    await saveToCloudHistory(brand,lastInputs);
+    // History disabled
     showToast('✦ New brand #'+usedBrandNames.length+' generated!');
     document.getElementById('output').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){btn.disabled=false;btn.classList.remove('loading');setLoading(false);showError('Regeneration failed.');}
@@ -1793,7 +1717,7 @@ function getStyleConfig() {
 
 async function runProductScan() {
   if (!scanImageBase64) { showToast('Please upload a product image first.'); return; }
-  if (!currentUser) { showToast('Please sign in first.'); return; }
+  
 
   const btn = document.getElementById('scanBtn');
   const loadingBar = document.getElementById('scanLoadingBar');
